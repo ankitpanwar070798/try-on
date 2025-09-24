@@ -8,13 +8,13 @@ const footerLinks = {
     { name: "API", href: "/api" },
     { name: "Integrations", href: "/integrations" }
   ],
-  company: [
-    { name: "About Us", href: "/about" },
-    { name: "Blog", href: "/blog" },
-    { name: "Careers", href: "/careers" },
-    { name: "Press", href: "/press" },
-    { name: "Contact", href: "#contact" }
-  ],
+  // company: [
+  //   { name: "About Us", href: "/about" },
+  //   { name: "Blog", href: "/blog" },
+  //   { name: "Careers", href: "/careers" },
+  //   { name: "Press", href: "/press" },
+  //   { name: "Contact", href: "#contact" }
+  // ],
   support: [
     { name: "Help Center", href: "/help" },
     { name: "FAQ", href: "#faq" },
@@ -26,7 +26,6 @@ const footerLinks = {
     { name: "Privacy Policy", href: "/privacy" },
     { name: "Terms of Service", href: "/terms" },
     { name: "Cookie Policy", href: "/cookies" },
-    { name: "GDPR", href: "/gdpr" }
   ]
 };
 

@@ -1,4 +1,3 @@
-
 export const Demo = () => {
   return (
     <section className="pt-24 bg-gradient-card" id="demo">
@@ -11,11 +10,24 @@ export const Demo = () => {
             Watch how our AI shows you exactly how different outfits look on you. Hover to see the try-on result.
           </p>
         </div>
-          <div className="rounded-xl overflow-hidden relative">
-            <video autoPlay muted loop className="w-full h-full object-cover">
-              <source src="/assets/bg-video.mp4" type="video/mp4" />
+
+        <div >
+          <div className="relative overflow-hidden">
+            <video
+              className="w-full max-w-2xl h-auto object-cover rounded-2xl mx-auto border border-foreground/10 shadow-lg"
+              autoPlay
+              loop
+              muted
+              playsInline
+            >
+              <source
+                src="/assets/tryon.mp4"
+                type="video/mp4"
+              />
+              Your browser does not support the video tag.
             </video>
           </div>
+        </div>
       </div>
     </section>
   );

@@ -42,7 +42,7 @@ export default function VirtualTryOn() {
     if (savedUserPhoto) setUserPhoto(JSON.parse(savedUserPhoto));
     if (savedProductPhoto) setProductPhoto(JSON.parse(savedProductPhoto));
     if (savedGeneratedImage) setGeneratedImage(savedGeneratedImage);
-    
+
     // Welcome toast
     toastUtils.app.welcome();
   }, []);
@@ -150,73 +150,79 @@ export default function VirtualTryOn() {
     toast.success("Product photo removed successfully");
   };
 
-  const handleGenerateTryOn = async () => {
-    if (!userPhoto || !productPhoto) return toast.error("Please upload both photos");
-    if (!FAL_API_KEY) return toast.error("Missing Fal API key in .env");
+const handleGenerateTryOn = async () => {
+  if (!userPhoto || !productPhoto) return toast.error("Please upload both photos");
+  if (!FAL_API_KEY) return toast.error("Missing Fal API key in .env");
 
-    setIsGenerating(true);
-    setGeneratedImage(null);
-    toast.info("Starting AI try-on generation...");
+  setIsGenerating(true);
+  setGeneratedImage(null);
 
-    try {
-      const submitResponse = await fetch("https://queue.fal.run/fal-ai/nano-banana/edit", {
-        method: "POST",
-        headers: {
-          Authorization: `Key ${FAL_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt:
-            "Create a professional e-commerce fashion photo. Take the dress from the second image and let the person from the first image wear it. Keep the person body pose, face, and background intact.",
-          image_urls: [userPhoto.data, productPhoto.data],
-          num_images: 1,
-          output_format: "jpeg",
-        }),
-      });
+  toast.info("Starting AI try-on generation...", { duration: 3000 });
 
-      if (!submitResponse.ok) throw new Error("Failed to submit request");
+  try {
+    const submitResponse = await fetch("https://queue.fal.run/fal-ai/nano-banana/edit", {
+      method: "POST",
+      headers: {
+        Authorization: `Key ${FAL_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt:
+          "prompt: Professional fashion photography: Seamlessly blend the clothing item from the second image onto the person in the first image. Maintain the person's natural body pose, facial features, skin tone, and original background. Ensure realistic fabric draping, proper fit, and natural lighting. The result should look like a high-quality product photo shoot.",
+        image_urls: [userPhoto.data, productPhoto.data],
+        num_images: 1,
+        output_format: "jpeg",
+      }),
+    });
 
-      const submitResult = await submitResponse.json();
-      const { request_id } = submitResult;
-      
-      toast.info("Request submitted. Processing your try-on...");
+    if (!submitResponse.ok) throw new Error("Failed to submit request");
 
-      let status;
-      do {
-        await new Promise((res) => setTimeout(res, 5000));
-        const statusResponse = await fetch(
-          `https://queue.fal.run/fal-ai/nano-banana/requests/${request_id}/status`,
-          { headers: { Authorization: `Key ${FAL_API_KEY}` } }
-        );
-        status = await statusResponse.json();
-        
-        if (status.status === "IN_PROGRESS") {
-          toast.info("AI is working on your try-on...");
-        }
-      } while (status.status === "IN_QUEUE" || status.status === "IN_PROGRESS");
+    const { request_id } = await submitResponse.json();
+    toast.info("Request submitted. Processing your try-on...");
 
-      if (status.status === "FAILED") throw new Error("Try-on failed on server");
+    let status;
+    let retries = 0;
+    do {
+      await new Promise((res) => setTimeout(res, 5000));
+      retries++;
+      if (retries > 20) throw new Error("Try-on request timed out");
 
-      const resultResponse = await fetch(
-        `https://queue.fal.run/fal-ai/nano-banana/requests/${request_id}`,
+      const statusResponse = await fetch(
+        `https://queue.fal.run/fal-ai/nano-banana/requests/${request_id}/status`,
         { headers: { Authorization: `Key ${FAL_API_KEY}` } }
       );
-      const result = await resultResponse.json();
+      status = await statusResponse.json();
 
-      if (result?.images?.length) {
-        setGeneratedImage(result.images[0].url);
-        localStorage.setItem("generatedImage", result.images[0].url);
-        toast.success("Virtual try-on generated successfully! 🎉");
-      } else throw new Error("No image generated");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to generate try-on");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+    } while (status.status === "IN_QUEUE" || status.status === "IN_PROGRESS");
+
+    if (status.status === "FAILED") throw new Error("Try-on failed on server");
+
+    const resultResponse = await fetch(
+      `https://queue.fal.run/fal-ai/nano-banana/requests/${request_id}`,
+      { headers: { Authorization: `Key ${FAL_API_KEY}` } }
+    );
+    const result = await resultResponse.json();
+
+    if (result?.images?.length) {
+      setGeneratedImage(result.images[0].url);
+      localStorage.setItem("generatedImage", result.images[0].url);
+      toast.success("Virtual try-on generated successfully! 🎉");
+    } else throw new Error("No image generated");
+
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : "Failed to generate try-on");
+  } finally {
+    setIsGenerating(false);
+  }
+};
+
 
   return (
-    <div className="min-h-screen py-22 px-4 bg-[var(--background)]">
+    <div className="min-h-screen py-10 px-4 " style={{
+      background: "#ffffff",
+      backgroundImage: "radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.35) 1px, transparent 0)",
+      backgroundSize: "20px 20px",
+    }}>
       <div className="max-w-5xl mx-auto flex flex-col gap-8">
         {/* Header */}
         <div className="text-center space-y-2">
@@ -226,7 +232,7 @@ export default function VirtualTryOn() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* User Photo Card */}
-          <Card className="surface rounded-xl">
+          <Card className="surface rounded-xl bg-teal-100">
             <CardHeader>
               <CardTitle className="text-lg">Your Photo</CardTitle>
               <CardDescription>Upload or capture a photo of yourself</CardDescription>
@@ -235,8 +241,8 @@ export default function VirtualTryOn() {
               {userPhoto ? (
                 <div className="relative">
                   <Image src={userPhoto.data} alt={userPhoto.name} width={256} height={256} className="rounded-lg object-cover" />
-                  <Button onClick={handleRemoveUserPhoto} size="sm" variant="destructive" className="absolute top-2 right-2">
-                    <Trash2Icon className="w-4 h-4" />
+                  <Button onClick={handleRemoveUserPhoto} size="sm" variant="destructive" className="absolute top-2 right-2 bg-red-500">
+                    <Trash2Icon className="w-4 h-4 " />
                   </Button>
                 </div>
               ) : (
@@ -247,20 +253,20 @@ export default function VirtualTryOn() {
               )}
 
               <div className="flex gap-2 w-full justify-center">
-                <Input 
-                  id="user-file-upload" 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleUserFileUpload} 
-                  className="hidden" 
+                <Input
+                  id="user-file-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleUserFileUpload}
+                  className="hidden"
                 />
-                <Button asChild variant={userPhoto ? "outline" : "default"} className="flex-1">
-                  <Label htmlFor="user-file-upload" className="cursor-pointer flex items-center gap-2">
+                <Button asChild variant={userPhoto ? "outline" : "default"} className="cursor-pointer flex-1 bg-gray-800 border border-gray-300 text-gray-100 hover:bg-gray-700 transition-colors">
+                  <Label htmlFor="user-file-upload" className=" flex items-center gap-2">
                     {isUploadingUser ? <Loader2Icon className="w-4 h-4 animate-spin" /> : <UploadIcon className="w-4 h-4" />}
                     {isUploadingUser ? "Uploading..." : "Upload"}
                   </Label>
                 </Button>
-                <Button onClick={() => captureFromCamera(setUserPhoto, "userPhoto")} variant="secondary" className="flex-1">
+                <Button onClick={() => captureFromCamera(setUserPhoto, "userPhoto")} variant="secondary" className="cursor-pointer flex-1 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
                   <CameraIcon className="w-4 h-4 mr-2" />
                   Capture
                 </Button>
@@ -269,7 +275,7 @@ export default function VirtualTryOn() {
           </Card>
 
           {/* Product Photo Card */}
-          <Card className="surface rounded-xl">
+          <Card className="surface rounded-xl bg-amber-100">
             <CardHeader>
               <CardTitle className="text-lg">Product Photo</CardTitle>
               <CardDescription>Upload or capture the clothing item</CardDescription>
@@ -278,7 +284,7 @@ export default function VirtualTryOn() {
               {productPhoto ? (
                 <div className="relative">
                   <Image src={productPhoto.data} alt={productPhoto.name} width={256} height={256} className="rounded-lg object-cover" />
-                  <Button onClick={handleRemoveProductPhoto} size="sm" variant="destructive" className="absolute top-2 right-2">
+                  <Button onClick={handleRemoveProductPhoto} size="sm" variant="destructive" className="absolute top-2 right-2 bg-red-500">
                     <Trash2Icon className="w-4 h-4" />
                   </Button>
                 </div>
@@ -290,20 +296,20 @@ export default function VirtualTryOn() {
               )}
 
               <div className="flex gap-2 w-full justify-center">
-                <Input 
-                  id="product-file-upload" 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleProductFileUpload} 
-                  className="hidden" 
+                <Input
+                  id="product-file-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProductFileUpload}
+                  className="hidden"
                 />
-                <Button asChild variant={productPhoto ? "outline" : "default"} className="flex-1">
-                  <Label htmlFor="product-file-upload" className="cursor-pointer flex items-center gap-2">
+                <Button asChild variant={productPhoto ? "outline" : "default"} className="cursor-pointer flex-1 bg-gray-800 border border-gray-300 text-gray-100 hover:bg-gray-700 transition-colors">
+                  <Label htmlFor="product-file-upload" className="flex items-center gap-2">
                     {isUploadingProduct ? <Loader2Icon className="w-4 h-4 animate-spin" /> : <UploadIcon className="w-4 h-4" />}
                     {isUploadingProduct ? "Uploading..." : "Upload"}
                   </Label>
                 </Button>
-                <Button onClick={() => captureFromCamera(setProductPhoto, "productPhoto")} variant="secondary" className="flex-1">
+                <Button onClick={() => captureFromCamera(setProductPhoto, "productPhoto")} variant="secondary" className="cursor-pointer flex-1 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
                   <CameraIcon className="w-4 h-4 mr-2" />
                   Capture
                 </Button>
@@ -314,7 +320,7 @@ export default function VirtualTryOn() {
 
         {/* Generate Button */}
         <div className="flex justify-center">
-          <Button onClick={handleGenerateTryOn} disabled={!userPhoto || !productPhoto || isGenerating} size="lg" className="px-6">
+          <Button onClick={handleGenerateTryOn} disabled={!userPhoto || !productPhoto || isGenerating} size="lg" className="cursor-pointer sm:w-2xs w-full  px-6 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
             {isGenerating ? <><Loader2Icon className="w-5 h-5 animate-spin mr-2" /> Generating...</> : "Generate Virtual Try-On"}
           </Button>
         </div>
