@@ -17,7 +17,7 @@ const Hero = () => {
     return (
 
 
-        <section className="relative min-h-80 flex items-center justify-center bg-gradient-to-br from-pastel-cream via-pastel-lavender to-pastel-blue overflow-hidden">
+        <section className="relative min-h-80 flex items-center justify-center bg-gradient-to-br from-pastel-cream via-pastel-lavender to-pastel-blue overflow-hidden pt-4">
             <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
                 <div className=" lg:text-left animate-fade-in flex flex-col items-center justify-center">
                     <div className="flex items-center justify-center lg:justify-start mb-6">
@@ -37,7 +37,7 @@ const Hero = () => {
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                         <button className="group bg-gradient-to-r from-accent-purple to-accent-teal text-zinc-600 px-8 py-4 rounded-full cursor-pointer font-semibold shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center" onClick={handleTryClick}>
-                            Try 1 Free Try-Ons
+                            Try Free Try-Ons
                             <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </button>
 
@@ -50,7 +50,7 @@ const Hero = () => {
                     <div className="mt-8 flex items-center justify-center lg:justify-start space-x-6 text-sm text-gray-500">
                         <div className="flex items-center text-zinc-700 font-medium">
                             <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-                            10 free tokens included
+                            3 free tokens included
                         </div>
                         <div className="flex items-center text-zinc-700 font-medium">
                             <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>

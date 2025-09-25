@@ -24,7 +24,7 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // ✅ Use getSession instead of getClaims
+  // Use getSession instead of getClaims
   const {
     data: { session },
   } = await supabase.auth.getSession();

@@ -1,7 +1,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { Crown, Menu, X } from 'lucide-react';
+import Link from 'next/link';
 
 const Navbar = () => {
   const router = useRouter();
@@ -25,17 +26,24 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300  ${isScrolled ? 'bg-white/10 backdrop-blur-lg shadow-lg' : 'bg-transparent'
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300  ${isScrolled ? 'bg-white/10 backdrop-blur-lg shadow-lg' : 'bg-white/5 backdrop-blur-lg'
       }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           {/* Logo */}
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-accent-purple to-accent-teal rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">👕</span>
+        <div className="flex items-center gap-3">
+          <Link href="/"  >
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+              <Crown className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-800">TryOnAI</span>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">TryOn AI</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Virtual Try-On Studio</p>
+            </div>
           </div>
+          </Link>
+        </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
@@ -79,12 +87,12 @@ const Navbar = () => {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidde mx-4 mb-4 overflow-hidden">
-            <div className="px-6 py-4 space-y-4">
+            <div className=" px-6 py-4 space-y-4">
               {navLinks.map((link) => (
                 <a
                   key={link.name}
                   href={link.href}
-                  className="text-gray-600 hover:text-accent-purple transition-colors duration-200 font-medium"
+                  className="text-gray-600 hover:text-accent-purple transition-colors duration-200 font-medium flex flex-col items-center"
                   onClick={(e) => {
                     e.preventDefault();
                     const section = document.querySelector(link.href);

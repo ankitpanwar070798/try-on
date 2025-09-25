@@ -5,8 +5,8 @@ const footerLinks = {
     { name: "Features", href: "#features" },
     { name: "Pricing", href: "#pricing" },
     { name: "Demo", href: "#demo" },
-    { name: "API", href: "/api" },
-    { name: "Integrations", href: "/integrations" }
+    { name: "Contact", href: "#contact" },
+    // { name: "Integrations", href: "/integrations" }
   ],
   // company: [
   //   { name: "About Us", href: "/about" },
@@ -16,24 +16,24 @@ const footerLinks = {
   //   { name: "Contact", href: "#contact" }
   // ],
   support: [
-    { name: "Help Center", href: "/help" },
+    { name: "Help Center", href: "/#" },
     { name: "FAQ", href: "#faq" },
-    { name: "Status", href: "/status" },
-    { name: "Community", href: "/community" },
-    { name: "Tutorials", href: "/tutorials" }
+    // { name: "Status", href: "/status" },
+    // { name: "Community", href: "/community" },
+    // { name: "Tutorials", href: "/tutorials" }
   ],
   legal: [
-    { name: "Privacy Policy", href: "/privacy" },
-    { name: "Terms of Service", href: "/terms" },
-    { name: "Cookie Policy", href: "/cookies" },
+    { name: "Privacy Policy", href: "#" },
+    { name: "Terms of Service", href: "#" },
+    { name: "Cookie Policy", href: "#" },
   ]
 };
 
 const socialLinks = [
-  { name: "Twitter", icon: Twitter, href: "https://twitter.com/photoai" },
-  { name: "Instagram", icon: Instagram, href: "https://instagram.com/photoai" },
-  { name: "Facebook", icon: Facebook, href: "https://facebook.com/photoai" },
-  { name: "LinkedIn", icon: Linkedin, href: "https://linkedin.com/company/photoai" }
+  { name: "Twitter", icon: Twitter, href: "#" },
+  { name: "Instagram", icon: Instagram, href: "#" },
+  { name: "Facebook", icon: Facebook, href: "#" },
+  { name: "LinkedIn", icon: Linkedin, href: "#" }
 ];
 
 export const Footer = () => {

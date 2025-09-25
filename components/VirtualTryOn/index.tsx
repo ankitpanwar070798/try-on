@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ImageIcon, Loader2Icon, Trash2Icon, UploadIcon, CameraIcon } from "lucide-react";
+import { ImageIcon, Loader2Icon, Trash2Icon, UploadIcon, CameraIcon, Download, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { toastUtils } from "@/lib/utils";
 
@@ -216,6 +216,61 @@ const handleGenerateTryOn = async () => {
   }
 };
 
+  const handleDownload = async () => {
+    if (!generatedImage) return;
+    
+    try {
+      const response = await fetch(generatedImage);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `virtual-try-on-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("Image downloaded successfully! 📥");
+    } catch (err) {
+      toast.error("Failed to download image");
+    }
+  };
+
+  const handleShare = async () => {
+    if (!generatedImage) return;
+
+    try {
+      // Check if Web Share API is supported
+      if (navigator.share) {
+        // For Web Share API, we need to convert the image to a File
+        const response = await fetch(generatedImage);
+        const blob = await response.blob();
+        const file = new File([blob], `virtual-try-on-${Date.now()}.png`, { type: 'image/png' });
+        
+        await navigator.share({
+          title: 'Virtual Try-On Result',
+          text: 'Check out my virtual try-on result!',
+          files: [file]
+        });
+        
+        toast.success("Shared successfully! 🚀");
+      } else {
+        // Fallback: Copy link to clipboard
+        await navigator.clipboard.writeText(generatedImage);
+        toast.success("Image link copied to clipboard! 📋");
+      }
+    } catch (err) {
+      // If sharing fails, try copying to clipboard as fallback
+      try {
+        await navigator.clipboard.writeText(generatedImage);
+        toast.success("Image link copied to clipboard! 📋");
+      } catch {
+        toast.error("Unable to share. Please try downloading instead.");
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen py-10 px-4 " style={{
@@ -329,7 +384,30 @@ const handleGenerateTryOn = async () => {
         {generatedImage && (
           <Card className="surface rounded-xl max-w-xl mx-auto">
             <CardHeader>
-              <CardTitle>Result</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Result</CardTitle>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    onClick={handleDownload}
+                    size="sm"
+                    variant="outline"
+                    className="flex items-center gap-2 text-xs sm:text-sm"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span className="hidden sm:inline">Download</span>
+                    <span className="sm:hidden">Save</span>
+                  </Button>
+                  <Button
+                    onClick={handleShare}
+                    size="sm"
+                    variant="outline"
+                    className="flex items-center gap-2 text-xs sm:text-sm"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="flex justify-center">
               <Image src={generatedImage} alt="Virtual try-on result" width={320} height={320} className="rounded-lg" />

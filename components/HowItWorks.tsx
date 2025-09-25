@@ -45,7 +45,7 @@ export const HowItWorks = () => {
             >
               <div className=" border border-gray-300 shadow-lg rounded-2xl p-4 shadow-card h-full">
                 {/* Step Number */}
-                <div className="absolute -top-4 -left-5 w-8 h-8 text-lg border-2 border-gray-400 text-gray-500 rounded-full flex items-center justify-center font-semibold text-foreground shadow-soft">
+                <div className="absolute -top-4 -left-2 sm:-top-3 sm:-left-3 w-8 h-8 text-lg border-2 border-gray-400 text-gray-500 rounded-full flex items-center justify-center font-semibold text-foreground shadow-soft">
                   {index + 1}
                 </div>
 

@@ -4,8 +4,8 @@ import { Check, Star } from "lucide-react";
 const plans = [
   {
     name: "Basic",
-    price: "₹499",
-    period: "250 tokens",
+    price: "₹199",
+    period: "20 images",
     description: "Perfect for trying out virtual try-on",
     features: [
       "Premium quality output",
@@ -19,8 +19,8 @@ const plans = [
   },
   {
     name: "Pro",
-    price: "₹999",
-    period: "500 tokens",
+    price: "₹499",
+    period: "50 images",
     description: "Best for fashion enthusiasts",
     features: [
       "Unlimited try-ons",
@@ -45,7 +45,7 @@ export const Pricing = () => {
             Simple, Transparent Pricing
           </h2>
           <p className="text-subheading text-gray-600 max-w-2xl mx-auto">
-            Choose the perfect plan for your virtual try-on needs. Start with 10 free tokens or go according to your budget.
+            Choose the perfect plan for your virtual try-on needs. Start with 3 free tokens or go according to your budget.
           </p>
         </div>
 

@@ -20,7 +20,7 @@ const faqs = [
   },
   {
     question: "How many free try-ons do I get?",
-    answer: "Every new user gets 10 free try-on tokens. Each try-on uses 1 token. Once you use all 10, you can purchase more tokens or upgrade to unlimited monthly plans."
+    answer: "Every new user gets 3 free try-on tokens. Each try-on uses 1 token. Once you use all 10, you can purchase more tokens or upgrade to unlimited monthly plans."
   },
   {
     question: "Can I save and share my try-on results?",
@@ -30,14 +30,14 @@ const faqs = [
     question: "How accurate are the try-on results?",
     answer: "Our AI provides realistic visualizations that help you make better shopping decisions. While results may vary based on photo quality and clothing type, most users find them very helpful for online shopping."
   },
-  {
-    question: "Do you offer refunds?",
-    answer: "We offer a 30-day money-back guarantee for all paid plans. If you're not completely satisfied with our virtual try-on service, contact our support team within 30 days for a full refund."
-  },
-  {
-    question: "Can retailers integrate this technology?",
-    answer: "Yes! Our Business plan includes API access and white-label options. Fashion brands and retailers can integrate our virtual try-on technology directly into their websites and apps."
-  }
+  // {
+  //   question: "Do you offer refunds?",
+  //   answer: "We offer a 30-day money-back guarantee for all paid plans. If you're not completely satisfied with our virtual try-on service, contact our support team within 30 days for a full refund."
+  // },
+  // {
+  //   question: "Can retailers integrate this technology?",
+  //   answer: "Yes! Our Business plan includes API access and white-label options. Fashion brands and retailers can integrate our virtual try-on technology directly into their websites and apps."
+  // }
 ];
 
 export const FAQ = () => {
