@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ImageIcon, Loader2Icon, Trash2Icon, UploadIcon, CameraIcon, Download, Share2 } from "lucide-react";
+import { ImageIcon, Loader2Icon, Trash2Icon, UploadIcon, CameraIcon, Download, Share2, Maximize2, X } from "lucide-react";
 import { toast } from "sonner";
 import { toastUtils } from "@/lib/utils";
 
@@ -31,6 +31,15 @@ export default function VirtualTryOn() {
   const [isUploadingUser, setIsUploadingUser] = useState(false);
   const [isUploadingProduct, setIsUploadingProduct] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  
+  // User preferences for better output
+  const [gender, setGender] = useState<"male" | "female" | "unisex">("unisex");
+  const [garmentCategory, setGarmentCategory] = useState<"top" | "bottom" | "dress" | "undergarment">("top");
+  const [fitPreference, setFitPreference] = useState<"tight" | "regular" | "loose">("regular");
+  const [preserveBackground, setPreserveBackground] = useState(true);
+  const [viewAngle, setViewAngle] = useState<"front" | "back" | "side" | "multiple">("front");
+  
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // Load saved data from localStorage
@@ -55,6 +64,23 @@ export default function VirtualTryOn() {
       reader.onerror = (error) => reject(error);
     });
   };
+
+    const openPreview = () => {
+      if (!generatedImage) return;
+      setIsPreviewOpen(true);
+    };
+
+    const closePreview = () => setIsPreviewOpen(false);
+
+    // Close preview with ESC
+    useEffect(() => {
+      if (!isPreviewOpen) return;
+      const onKey = (e: KeyboardEvent) => {
+        if (e.key === "Escape") closePreview();
+      };
+      window.addEventListener("keydown", onKey);
+      return () => window.removeEventListener("keydown", onKey);
+    }, [isPreviewOpen]);
 
   const captureFromCamera = async (setPhoto: (p: UserPhoto) => void, key: string) => {
     toastUtils.app.cameraStart();
@@ -150,80 +176,195 @@ export default function VirtualTryOn() {
     toast.success("Product photo removed successfully");
   };
 
-const handleGenerateTryOn = async () => {
-  if (!userPhoto || !productPhoto) return toast.error("Please upload both photos");
-  if (!FAL_API_KEY) return toast.error("Missing Fal API key in .env");
+  // Dynamic prompt generator based on user preferences
+  const generatePrompt = () => {
+    const genderText = gender === "male" ? "man" : gender === "female" ? "woman" : "person";
+    const fitText = fitPreference === "tight" ? "fitted and snug" : fitPreference === "loose" ? "relaxed and comfortable" : "well-fitted";
+    const backgroundText = preserveBackground ? "Maintain the original background exactly as shown." : "You may adjust the background for better composition.";
+    
+    let viewAngleText = "";
+    switch (viewAngle) {
+      case "front":
+        viewAngleText = "Show the garment from the front view, focusing on how it looks from the front angle.";
+        break;
+      case "back":
+        viewAngleText = "Show the garment from the back view, focusing on the rear appearance and back design of the garment.";
+        break;
+      case "side":
+        viewAngleText = "Show the garment from a side profile view, highlighting the side silhouette and fit.";
+        break;
+      case "multiple":
+        viewAngleText = "Show the garment from multiple angles if possible, capturing both front and back views to give a complete look.";
+        break;
+    }
+    
+    let garmentDescription = "";
+    switch (garmentCategory) {
+      case "top":
+        garmentDescription = "upper body garment (shirt, t-shirt, blouse, or jacket)";
+        break;
+      case "bottom":
+        garmentDescription = "lower body garment (pants, jeans, skirt, or shorts)";
+        break;
+      case "dress":
+        garmentDescription = "full-length dress or one-piece outfit";
+        break;
+      case "undergarment":
+        garmentDescription = gender === "male" 
+          ? "men's undergarment (briefs, boxers, or undershirt) with natural body contours and appropriate coverage"
+          : "women's undergarment (bra, panties, or lingerie) with natural body contours, proper fit, and appropriate coverage";
+        break;
+    }
 
-  setIsGenerating(true);
-  setGeneratedImage(null);
+    return `Professional fashion photography: You are creating a high-quality virtual try-on for a ${genderText}. Seamlessly blend the ${garmentDescription} from the second image onto the person in the first image. 
 
-  toast.info("Starting AI try-on generation...", { duration: 3000 });
+Key requirements:
+- Maintain the person's natural body pose, facial features, skin tone, and body proportions
+- Ensure the garment has a ${fitText} appearance with realistic fabric draping and texture
+- ${viewAngleText}
+- Pay attention to proper lighting, shadows, and highlights that match the original photo
+- Keep all body parts naturally proportioned and positioned
+- ${backgroundText}
+- The final result should look like a professional product photoshoot with natural, realistic appearance
+- Ensure appropriate coverage and natural body contours for the garment type
 
-  try {
-    const submitResponse = await fetch("https://queue.fal.run/fal-ai/nano-banana/edit", {
-      method: "POST",
-      headers: {
-        Authorization: `Key ${FAL_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        prompt:
-          "prompt: Professional fashion photography: Seamlessly blend the clothing item from the second image onto the person in the first image. Maintain the person's natural body pose, facial features, skin tone, and original background. Ensure realistic fabric draping, proper fit, and natural lighting. The result should look like a high-quality product photo shoot.",
-        image_urls: [userPhoto.data, productPhoto.data],
-        num_images: 1,
-        output_format: "jpeg",
-      }),
-    });
+Focus on realism, proper fit, and professional quality.`;
+  };
 
-    if (!submitResponse.ok) throw new Error("Failed to submit request");
+  const handleGenerateTryOn = async () => {
+    if (!userPhoto || !productPhoto) return toast.error("Please upload both photos");
+    if (!FAL_API_KEY) return toast.error("Missing Fal API key in .env");
 
-    const { request_id } = await submitResponse.json();
-    toast.info("Request submitted. Processing your try-on...");
+    setIsGenerating(true);
+    setGeneratedImage(null);
 
-    let status;
-    let retries = 0;
-    do {
-      await new Promise((res) => setTimeout(res, 5000));
-      retries++;
-      if (retries > 20) throw new Error("Try-on request timed out");
+    toast.info("Starting AI try-on generation...", { duration: 3000 });
 
-      const statusResponse = await fetch(
-        `https://queue.fal.run/fal-ai/nano-banana/requests/${request_id}/status`,
-        { headers: { Authorization: `Key ${FAL_API_KEY}` } }
-      );
-      status = await statusResponse.json();
+    try {
+      // Use fashn model for dresses and full-body garments, nano-banana for others
+      const useFashnModel = garmentCategory === "dress";
+      const modelEndpoint = useFashnModel 
+        ? "fal-ai/fashn/tryon/v1.6" 
+        : "fal-ai/nano-banana/edit";
 
-    } while (status.status === "IN_QUEUE" || status.status === "IN_PROGRESS");
+      if (useFashnModel) {
+        // Use fashn model for dresses/one-piece garments
+        const submitResponse = await fetch(`https://queue.fal.run/${modelEndpoint}`, {
+          method: "POST",
+          headers: {
+            Authorization: `Key ${FAL_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            person_image_url: userPhoto.data,
+            garment_image_url: productPhoto.data,
+            num_images: 1,
+            output_format: "jpeg",
+          }),
+        });
 
-    if (status.status === "FAILED") throw new Error("Try-on failed on server");
+        if (!submitResponse.ok) throw new Error("Failed to submit request");
 
-    const resultResponse = await fetch(
-      `https://queue.fal.run/fal-ai/nano-banana/requests/${request_id}`,
-      { headers: { Authorization: `Key ${FAL_API_KEY}` } }
-    );
-    const result = await resultResponse.json();
+        const { request_id } = await submitResponse.json();
+        toast.info("Request submitted. Processing your try-on...");
 
-    if (result?.images?.length) {
-      setGeneratedImage(result.images[0].url);
-      localStorage.setItem("generatedImage", result.images[0].url);
-      toast.success("Virtual try-on generated successfully! 🎉");
-    } else throw new Error("No image generated");
+        let status;
+        let retries = 0;
+        do {
+          await new Promise((res) => setTimeout(res, 5000));
+          retries++;
+          if (retries > 20) throw new Error("Try-on request timed out");
 
-  } catch (err) {
-    toast.error(err instanceof Error ? err.message : "Failed to generate try-on");
-  } finally {
-    setIsGenerating(false);
-  }
-};
+          const statusResponse = await fetch(
+            `https://queue.fal.run/${modelEndpoint}/requests/${request_id}/status`,
+            { headers: { Authorization: `Key ${FAL_API_KEY}` } }
+          );
+          status = await statusResponse.json();
+
+        } while (status.status === "IN_QUEUE" || status.status === "IN_PROGRESS");
+
+        if (status.status === "FAILED") throw new Error("Try-on failed on server");
+
+        const resultResponse = await fetch(
+          `https://queue.fal.run/${modelEndpoint}/requests/${request_id}`,
+          { headers: { Authorization: `Key ${FAL_API_KEY}` } }
+        );
+        const result = await resultResponse.json();
+
+        if (result?.images?.length) {
+          setGeneratedImage(result.images[0].url);
+          localStorage.setItem("generatedImage", result.images[0].url);
+          toast.success("Virtual try-on generated successfully! 🎉");
+        } else throw new Error("No image generated");
+
+      } else {
+        // Use nano-banana for regular clothing items with dynamic prompt
+        const dynamicPrompt = generatePrompt();
+        
+        const submitResponse = await fetch(`https://queue.fal.run/${modelEndpoint}`, {
+          method: "POST",
+          headers: {
+            Authorization: `Key ${FAL_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt: dynamicPrompt,
+            image_urls: [userPhoto.data, productPhoto.data],
+            num_images: 1,
+            output_format: "jpeg",
+          }),
+        });
+
+        if (!submitResponse.ok) throw new Error("Failed to submit request");
+
+        const { request_id } = await submitResponse.json();
+        toast.info("Request submitted. Processing your try-on...");
+
+        let status;
+        let retries = 0;
+        do {
+          await new Promise((res) => setTimeout(res, 5000));
+          retries++;
+          if (retries > 20) throw new Error("Try-on request timed out");
+
+          const statusResponse = await fetch(
+            `https://queue.fal.run/${modelEndpoint}/requests/${request_id}/status`,
+            { headers: { Authorization: `Key ${FAL_API_KEY}` } }
+          );
+          status = await statusResponse.json();
+
+        } while (status.status === "IN_QUEUE" || status.status === "IN_PROGRESS");
+
+        if (status.status === "FAILED") throw new Error("Try-on failed on server");
+
+        const resultResponse = await fetch(
+          `https://queue.fal.run/${modelEndpoint}/requests/${request_id}`,
+          { headers: { Authorization: `Key ${FAL_API_KEY}` } }
+        );
+        const result = await resultResponse.json();
+
+        if (result?.images?.length) {
+          setGeneratedImage(result.images[0].url);
+          localStorage.setItem("generatedImage", result.images[0].url);
+          toast.success("Virtual try-on generated successfully! 🎉");
+        } else throw new Error("No image generated");
+      }
+
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to generate try-on");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleDownload = async () => {
     if (!generatedImage) return;
-    
+
     try {
       const response = await fetch(generatedImage);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      
+
       const link = document.createElement('a');
       link.href = url;
       link.download = `virtual-try-on-${Date.now()}.png`;
@@ -231,9 +372,9 @@ const handleGenerateTryOn = async () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
       toast.success("Image downloaded successfully! 📥");
-    } catch (err) {
+    } catch {
       toast.error("Failed to download image");
     }
   };
@@ -248,20 +389,20 @@ const handleGenerateTryOn = async () => {
         const response = await fetch(generatedImage);
         const blob = await response.blob();
         const file = new File([blob], `virtual-try-on-${Date.now()}.png`, { type: 'image/png' });
-        
+
         await navigator.share({
           title: 'Virtual Try-On Result',
           text: 'Check out my virtual try-on result!',
           files: [file]
         });
-        
+
         toast.success("Shared successfully! 🚀");
       } else {
         // Fallback: Copy link to clipboard
         await navigator.clipboard.writeText(generatedImage);
         toast.success("Image link copied to clipboard! 📋");
       }
-    } catch (err) {
+    } catch {
       // If sharing fails, try copying to clipboard as fallback
       try {
         await navigator.clipboard.writeText(generatedImage);
@@ -287,7 +428,7 @@ const handleGenerateTryOn = async () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* User Photo Card */}
-          <Card className="surface rounded-xl bg-teal-100">
+          <Card className="surface ">
             <CardHeader>
               <CardTitle className="text-lg">Your Photo</CardTitle>
               <CardDescription>Upload or capture a photo of yourself</CardDescription>
@@ -330,7 +471,7 @@ const handleGenerateTryOn = async () => {
           </Card>
 
           {/* Product Photo Card */}
-          <Card className="surface rounded-xl bg-amber-100">
+          <Card className=" rounded-xl">
             <CardHeader>
               <CardTitle className="text-lg">Product Photo</CardTitle>
               <CardDescription>Upload or capture the clothing item</CardDescription>
@@ -373,6 +514,152 @@ const handleGenerateTryOn = async () => {
           </Card>
         </div>
 
+        {/* Preferences Form */}
+        <Card className="surface rounded-xl max-w-3xl mx-auto">
+          <CardHeader>
+            <CardTitle className="text-base sm:text-lg">Try-On Preferences</CardTitle>
+            <CardDescription>Help us generate the perfect result by answering a few questions</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Gender Selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Who is trying on? 👤</Label>
+              <div className="grid grid-cols-3 gap-3">
+                {["male", "female", "unisex"].map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => setGender(g as typeof gender)}
+                    className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                      gender === g
+                        ? "border-blue-500 bg-blue-50 text-blue-900 dark:bg-blue-950/20 dark:text-blue-100"
+                        : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
+                    }`}
+                  >
+                    {g === "male" ? "👨 Male" : g === "female" ? "👩 Female" : "🧑 Unisex"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Garment Category */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">What type of garment? 👔</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { value: "top", label: "Top", icon: "👕", desc: "Shirts, blouses" },
+                  { value: "bottom", label: "Bottom", icon: "👖", desc: "Pants, skirts" },
+                  { value: "dress", label: "Dress", icon: "👗", desc: "Full outfits" },
+                  { value: "undergarment", label: "Underwear", icon: "🩱", desc: "Intimate wear" },
+                ].map((cat) => (
+                  <button
+                    key={cat.value}
+                    onClick={() => setGarmentCategory(cat.value as typeof garmentCategory)}
+                    className={`flex flex-col items-center gap-2 rounded-lg border-2 p-3 transition-all ${
+                      garmentCategory === cat.value
+                        ? "border-purple-500 bg-purple-50 dark:bg-purple-950/20"
+                        : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
+                    }`}
+                  >
+                    <span className="text-2xl">{cat.icon}</span>
+                    <div className="text-center">
+                      <p className={`text-xs font-medium ${
+                        garmentCategory === cat.value 
+                          ? "text-purple-900 dark:text-purple-100" 
+                          : "text-gray-900 dark:text-gray-100"
+                      }`}>
+                        {cat.label}
+                      </p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">{cat.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Fit Preference */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Preferred fit? 📏</Label>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { value: "tight", label: "Tight", icon: "🔥" },
+                  { value: "regular", label: "Regular", icon: "✅" },
+                  { value: "loose", label: "Loose", icon: "🌊" },
+                ].map((fit) => (
+                  <button
+                    key={fit.value}
+                    onClick={() => setFitPreference(fit.value as typeof fitPreference)}
+                    className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                      fitPreference === fit.value
+                        ? "border-teal-500 bg-teal-50 text-teal-900 dark:bg-teal-950/20 dark:text-teal-100"
+                        : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
+                    }`}
+                  >
+                    <span className="mr-1">{fit.icon}</span>
+                    {fit.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* View Angle Selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Viewing angle? 📸</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { value: "front", label: "Front", icon: "👤", desc: "Front view" },
+                  { value: "back", label: "Back", icon: "🔙", desc: "Back view" },
+                  { value: "side", label: "Side", icon: "↔️", desc: "Side profile" },
+                  { value: "multiple", label: "Both", icon: "🔄", desc: "Front & back" },
+                ].map((angle) => (
+                  <button
+                    key={angle.value}
+                    onClick={() => setViewAngle(angle.value as typeof viewAngle)}
+                    className={`flex flex-col items-center gap-2 rounded-lg border-2 p-3 transition-all ${
+                      viewAngle === angle.value
+                        ? "border-orange-500 bg-orange-50 dark:bg-orange-950/20"
+                        : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
+                    }`}
+                  >
+                    <span className="text-2xl">{angle.icon}</span>
+                    <div className="text-center">
+                      <p className={`text-xs font-medium ${
+                        viewAngle === angle.value 
+                          ? "text-orange-900 dark:text-orange-100" 
+                          : "text-gray-900 dark:text-gray-100"
+                      }`}>
+                        {angle.label}
+                      </p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">{angle.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Background Preference */}
+            <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="space-y-1">
+                <Label className="text-sm font-medium">Keep original background? 🖼️</Label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Preserve your photo&apos;s background exactly as is
+                </p>
+              </div>
+              <button
+                onClick={() => setPreserveBackground(!preserveBackground)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  preserveBackground ? "bg-teal-500" : "bg-gray-300 dark:bg-gray-600"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    preserveBackground ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Generate Button */}
         <div className="flex justify-center">
           <Button onClick={handleGenerateTryOn} disabled={!userPhoto || !productPhoto || isGenerating} size="lg" className="cursor-pointer sm:w-2xs w-full  px-6 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
@@ -384,14 +671,26 @@ const handleGenerateTryOn = async () => {
         {generatedImage && (
           <Card className="surface rounded-xl max-w-xl mx-auto">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Result</CardTitle>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="text-base sm:text-lg">Result</CardTitle>
                 <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    onClick={openPreview}
+                    size="icon"
+                    variant="outline"
+                    className="h-9 w-9 sm:h-9 sm:w-9"
+                    title="Preview full screen"
+                    aria-label="Preview full screen"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </Button>
                   <Button
                     onClick={handleDownload}
                     size="sm"
                     variant="outline"
                     className="flex items-center gap-2 text-xs sm:text-sm"
+                    title="Download image"
+                    aria-label="Download image"
                   >
                     <Download className="w-4 h-4" />
                     <span className="hidden sm:inline">Download</span>
@@ -402,6 +701,8 @@ const handleGenerateTryOn = async () => {
                     size="sm"
                     variant="outline"
                     className="flex items-center gap-2 text-xs sm:text-sm"
+                    title="Share image"
+                    aria-label="Share image"
                   >
                     <Share2 className="w-4 h-4" />
                     Share
@@ -409,14 +710,64 @@ const handleGenerateTryOn = async () => {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="flex justify-center">
-              <Image src={generatedImage} alt="Virtual try-on result" width={320} height={320} className="rounded-lg" />
+            <CardContent>
+              <div className="relative mx-auto w-full max-w-sm">
+                <button
+                  type="button"
+                  onClick={openPreview}
+                  className="group block w-full overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  aria-label="Open preview"
+                >
+                  <div className="aspect-square w-full bg-black/5 dark:bg-white/5">
+                    <Image
+                      src={generatedImage}
+                      alt="Virtual try-on result"
+                      width={640}
+                      height={640}
+                      sizes="(max-width: 640px) 90vw, 400px"
+                      className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.01]"
+                    />
+                  </div>
+                </button>
+              </div>
             </CardContent>
           </Card>
         )}
 
         {/* Hidden video element */}
         <video ref={videoRef} className="hidden" />
+
+        {/* Fullscreen Preview Overlay */}
+        {isPreviewOpen && generatedImage && (
+          <div
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            onClick={closePreview}
+          >
+            <div className="relative mx-auto my-auto w-[92vw] max-w-3xl" onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={closePreview}
+                className="absolute -top-12 right-0 inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 p-2 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white"
+                aria-label="Close preview"
+                title="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <div className="overflow-hidden rounded-xl border border-white/10 bg-black">
+                <Image
+                  src={generatedImage}
+                  alt="Generated preview"
+                  width={1200}
+                  height={1200}
+                  sizes="(max-width: 768px) 92vw, 70vw"
+                  className="h-auto w-full object-contain"
+                  priority
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
