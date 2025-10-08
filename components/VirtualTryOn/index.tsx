@@ -27,18 +27,20 @@ const FAL_API_KEY = process.env.NEXT_PUBLIC_FAL_API_KEY || "";
 export default function VirtualTryOn() {
   const [userPhoto, setUserPhoto] = useState<UserPhoto | null>(null);
   const [productPhoto, setProductPhoto] = useState<UserPhoto | null>(null);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  // Support multiple images for 'multiple' view
+  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null); // for backward compatibility
   const [isUploadingUser, setIsUploadingUser] = useState(false);
   const [isUploadingProduct, setIsUploadingProduct] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   
   // User preferences for better output
-  const [gender, setGender] = useState<"male" | "female" | "unisex">("unisex");
+  const [gender, setGender] = useState<"male" | "female" | "unisex">("male");
   const [garmentCategory, setGarmentCategory] = useState<"top" | "bottom" | "dress" | "undergarment">("top");
   const [fitPreference, setFitPreference] = useState<"tight" | "regular" | "loose">("regular");
   const [preserveBackground, setPreserveBackground] = useState(true);
-  const [viewAngle, setViewAngle] = useState<"front" | "back" | "side" | "multiple">("front");
+  const [viewAngle, setViewAngle] = useState<"front" | "back" | "multiple">("front");
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -47,10 +49,12 @@ export default function VirtualTryOn() {
     const savedUserPhoto = localStorage.getItem("userPhoto");
     const savedProductPhoto = localStorage.getItem("productPhoto");
     const savedGeneratedImage = localStorage.getItem("generatedImage");
+    const savedGeneratedImages = localStorage.getItem("generatedImages");
 
     if (savedUserPhoto) setUserPhoto(JSON.parse(savedUserPhoto));
     if (savedProductPhoto) setProductPhoto(JSON.parse(savedProductPhoto));
     if (savedGeneratedImage) setGeneratedImage(savedGeneratedImage);
+    if (savedGeneratedImages) setGeneratedImages(JSON.parse(savedGeneratedImages));
 
     // Welcome toast
     toastUtils.app.welcome();
@@ -190,9 +194,9 @@ export default function VirtualTryOn() {
       case "back":
         viewAngleText = "Show the garment from the back view, focusing on the rear appearance and back design of the garment.";
         break;
-      case "side":
-        viewAngleText = "Show the garment from a side profile view, highlighting the side silhouette and fit.";
-        break;
+      // case "side":
+      //   viewAngleText = "Show the garment from a side profile view, highlighting the side silhouette and fit.";
+      //   break;
       case "multiple":
         viewAngleText = "Show the garment from multiple angles if possible, capturing both front and back views to give a complete look.";
         break;
@@ -237,6 +241,7 @@ Focus on realism, proper fit, and professional quality.`;
 
     setIsGenerating(true);
     setGeneratedImage(null);
+    setGeneratedImages([]);
 
     toast.info("Starting AI try-on generation...", { duration: 3000 });
 
@@ -246,6 +251,9 @@ Focus on realism, proper fit, and professional quality.`;
       const modelEndpoint = useFashnModel 
         ? "fal-ai/fashn/tryon/v1.6" 
         : "fal-ai/nano-banana/edit";
+
+      // If user selected 'multiple', request 2 images (front and back)
+      const numImages = viewAngle === "multiple" ? 2 : 1;
 
       if (useFashnModel) {
         // Use fashn model for dresses/one-piece garments
@@ -258,7 +266,7 @@ Focus on realism, proper fit, and professional quality.`;
           body: JSON.stringify({
             person_image_url: userPhoto.data,
             garment_image_url: productPhoto.data,
-            num_images: 1,
+            num_images: numImages,
             output_format: "jpeg",
           }),
         });
@@ -292,8 +300,13 @@ Focus on realism, proper fit, and professional quality.`;
         const result = await resultResponse.json();
 
         if (result?.images?.length) {
-          setGeneratedImage(result.images[0].url);
-          localStorage.setItem("generatedImage", result.images[0].url);
+          if (numImages === 2) {
+            setGeneratedImages([result.images[0].url, result.images[1].url]);
+            localStorage.setItem("generatedImages", JSON.stringify([result.images[0].url, result.images[1].url]));
+          } else {
+            setGeneratedImage(result.images[0].url);
+            localStorage.setItem("generatedImage", result.images[0].url);
+          }
           toast.success("Virtual try-on generated successfully! 🎉");
         } else throw new Error("No image generated");
 
@@ -310,7 +323,7 @@ Focus on realism, proper fit, and professional quality.`;
           body: JSON.stringify({
             prompt: dynamicPrompt,
             image_urls: [userPhoto.data, productPhoto.data],
-            num_images: 1,
+            num_images: numImages,
             output_format: "jpeg",
           }),
         });
@@ -344,8 +357,13 @@ Focus on realism, proper fit, and professional quality.`;
         const result = await resultResponse.json();
 
         if (result?.images?.length) {
-          setGeneratedImage(result.images[0].url);
-          localStorage.setItem("generatedImage", result.images[0].url);
+          if (numImages === 2) {
+            setGeneratedImages([result.images[0].url, result.images[1].url]);
+            localStorage.setItem("generatedImages", JSON.stringify([result.images[0].url, result.images[1].url]));
+          } else {
+            setGeneratedImage(result.images[0].url);
+            localStorage.setItem("generatedImage", result.images[0].url);
+          }
           toast.success("Virtual try-on generated successfully! 🎉");
         } else throw new Error("No image generated");
       }
@@ -524,14 +542,14 @@ Focus on realism, proper fit, and professional quality.`;
             {/* Gender Selection */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">Who is trying on? 👤</Label>
-              <div className="grid grid-cols-3 gap-3">
-                {["male", "female", "unisex"].map((g) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {["male", "female", "unisex"]?.map((g) => (
                   <button
                     key={g}
                     onClick={() => setGender(g as typeof gender)}
                     className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${
                       gender === g
-                        ? "border-blue-500 bg-blue-50 text-blue-900 dark:bg-blue-950/20 dark:text-blue-100"
+                        ? "border-blue-500 bg-blue-50 text-blue-900 dark:bg-blue-950/20 "
                         : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
                     }`}
                   >
@@ -550,7 +568,7 @@ Focus on realism, proper fit, and professional quality.`;
                   { value: "bottom", label: "Bottom", icon: "👖", desc: "Pants, skirts" },
                   { value: "dress", label: "Dress", icon: "👗", desc: "Full outfits" },
                   { value: "undergarment", label: "Underwear", icon: "🩱", desc: "Intimate wear" },
-                ].map((cat) => (
+                ]?.map((cat) => (
                   <button
                     key={cat.value}
                     onClick={() => setGarmentCategory(cat.value as typeof garmentCategory)}
@@ -564,12 +582,12 @@ Focus on realism, proper fit, and professional quality.`;
                     <div className="text-center">
                       <p className={`text-xs font-medium ${
                         garmentCategory === cat.value 
-                          ? "text-purple-900 dark:text-purple-100" 
-                          : "text-gray-900 dark:text-gray-100"
+                          ? "text-purple-900 " 
+                          : "text-gray-900 "
                       }`}>
                         {cat.label}
                       </p>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400">{cat.desc}</p>
+                      <p className="text-[10px] text-gray-500 ">{cat.desc}</p>
                     </div>
                   </button>
                 ))}
@@ -579,18 +597,18 @@ Focus on realism, proper fit, and professional quality.`;
             {/* Fit Preference */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">Preferred fit? 📏</Label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[
                   { value: "tight", label: "Tight", icon: "🔥" },
                   { value: "regular", label: "Regular", icon: "✅" },
                   { value: "loose", label: "Loose", icon: "🌊" },
-                ].map((fit) => (
+                ]?.map((fit) => (
                   <button
                     key={fit.value}
                     onClick={() => setFitPreference(fit.value as typeof fitPreference)}
                     className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${
                       fitPreference === fit.value
-                        ? "border-teal-500 bg-teal-50 text-teal-900 dark:bg-teal-950/20 dark:text-teal-100"
+                        ? "border-teal-500 bg-teal-50 dark:bg-teal-950/20 "
                         : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
                     }`}
                   >
@@ -604,13 +622,13 @@ Focus on realism, proper fit, and professional quality.`;
             {/* View Angle Selection */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">Viewing angle? 📸</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[
                   { value: "front", label: "Front", icon: "👤", desc: "Front view" },
                   { value: "back", label: "Back", icon: "🔙", desc: "Back view" },
-                  { value: "side", label: "Side", icon: "↔️", desc: "Side profile" },
+                  // { value: "side", label: "Side", icon: "↔️", desc: "Side profile" },
                   { value: "multiple", label: "Both", icon: "🔄", desc: "Front & back" },
-                ].map((angle) => (
+                ]?.map((angle) => (
                   <button
                     key={angle.value}
                     onClick={() => setViewAngle(angle.value as typeof viewAngle)}
@@ -624,12 +642,12 @@ Focus on realism, proper fit, and professional quality.`;
                     <div className="text-center">
                       <p className={`text-xs font-medium ${
                         viewAngle === angle.value 
-                          ? "text-orange-900 dark:text-orange-100" 
-                          : "text-gray-900 dark:text-gray-100"
+                          ? "text-orange-900 " 
+                          : "text-gray-900 "
                       }`}>
                         {angle.label}
                       </p>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400">{angle.desc}</p>
+                      <p className="text-[10px] ">{angle.desc}</p>
                     </div>
                   </button>
                 ))}
@@ -637,7 +655,7 @@ Focus on realism, proper fit, and professional quality.`;
             </div>
 
             {/* Background Preference */}
-            <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between  p-4 rounded-lg border border-gray-200 dark:border-gray-700">
               <div className="space-y-1">
                 <Label className="text-sm font-medium">Keep original background? 🖼️</Label>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -661,14 +679,19 @@ Focus on realism, proper fit, and professional quality.`;
         </Card>
 
         {/* Generate Button */}
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center justify-center">
           <Button onClick={handleGenerateTryOn} disabled={!userPhoto || !productPhoto || isGenerating} size="lg" className="cursor-pointer sm:w-2xs w-full  px-6 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
             {isGenerating ? <><Loader2Icon className="w-5 h-5 animate-spin mr-2" /> Generating...</> : "Generate Virtual Try-On"}
           </Button>
+          {isGenerating && (
+            <div className="mt-3 text-sm text-gray-600 animate-pulse text-center">
+              Please wait while we generate your virtual try-on. This may take up to 1 minute depending on server load.
+            </div>
+          )}
         </div>
 
         {/* Result Card */}
-        {generatedImage && (
+        {(generatedImage || generatedImages.length > 0) && (
           <Card className="surface rounded-xl max-w-xl mx-auto">
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
@@ -711,25 +734,51 @@ Focus on realism, proper fit, and professional quality.`;
               </div>
             </CardHeader>
             <CardContent>
-              <div className="relative mx-auto w-full max-w-sm">
-                <button
-                  type="button"
-                  onClick={openPreview}
-                  className="group block w-full overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  aria-label="Open preview"
-                >
-                  <div className="aspect-square w-full bg-black/5 dark:bg-white/5">
+              {/* Show two images side by side if 'multiple' view, else one image */}
+              {generatedImages.length === 2 ? (
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                  <div className="relative w-full max-w-xs">
                     <Image
-                      src={generatedImage}
-                      alt="Virtual try-on result"
-                      width={640}
-                      height={640}
-                      sizes="(max-width: 640px) 90vw, 400px"
-                      className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.01]"
+                      src={generatedImages[0]}
+                      alt="Front view result"
+                      width={400}
+                      height={400}
+                      className="rounded-lg object-cover w-full h-auto"
                     />
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white/80 text-xs px-2 py-1 rounded shadow">Front View</div>
                   </div>
-                </button>
-              </div>
+                  <div className="relative w-full max-w-xs">
+                    <Image
+                      src={generatedImages[1]}
+                      alt="Back view result"
+                      width={400}
+                      height={400}
+                      className="rounded-lg object-cover w-full h-auto"
+                    />
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white/80 text-xs px-2 py-1 rounded shadow">Back View</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative mx-auto w-full max-w-sm">
+                  <button
+                    type="button"
+                    onClick={openPreview}
+                    className="group block w-full overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    aria-label="Open preview"
+                  >
+                    <div className="aspect-square w-full bg-black/5 dark:bg-white/5">
+                      <Image
+                        src={generatedImage || generatedImages[0]}
+                        alt="Virtual try-on result"
+                        width={640}
+                        height={640}
+                        sizes="(max-width: 640px) 90vw, 400px"
+                        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.01]"
+                      />
+                    </div>
+                  </button>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

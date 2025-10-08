@@ -4,7 +4,7 @@ import { Check, Star } from "lucide-react";
 const plans = [
   {
     name: "Basic",
-    price: "₹199",
+    price: "₹XXX",
     period: "20 images",
     description: "Perfect for trying out virtual try-on",
     features: [
@@ -19,7 +19,7 @@ const plans = [
   },
   {
     name: "Pro",
-    price: "₹499",
+    price: "₹XXX",
     period: "50 images",
     description: "Best for fashion enthusiasts",
     features: [

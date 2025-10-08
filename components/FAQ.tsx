@@ -76,10 +76,10 @@ export const FAQ = () => {
           <p className="text-foreground/70 mb-4">Still have questions?</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
-              href="mailto:support@tryonai.com"
+              href="mailto:ankitpanwar0707@gmail.com"
               className="inline-flex items-center space-x-2 text-lavender hover:text-blush transition-colors"
             >
-              <span>Email us at support@tryonai.com</span>
+              <span>Email us at ankitpanwar0707@gmail.com</span>
             </a>
             <span className="hidden sm:block text-foreground/40">|</span>
             <a
