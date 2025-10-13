@@ -1,11 +1,10 @@
-import { Sparkles, Twitter, Instagram, Facebook, Linkedin } from "lucide-react";
+import { Sparkles, Twitter, Instagram, Facebook, Linkedin, DoorOpen } from "lucide-react";
 
 const footerLinks = {
   product: [
     { name: "Features", href: "#features" },
     { name: "Pricing", href: "#pricing" },
     { name: "Demo", href: "#demo" },
-    { name: "Contact", href: "#contact" },
     // { name: "Integrations", href: "/integrations" }
   ],
   // company: [
@@ -16,8 +15,9 @@ const footerLinks = {
   //   { name: "Contact", href: "#contact" }
   // ],
   support: [
-    { name: "Help Center", href: "/#" },
+    // { name: "Help Center", href: "/#" },
     { name: "FAQ", href: "#faq" },
+    { name: "Contact", href: "#contact" },
     // { name: "Status", href: "/status" },
     // { name: "Community", href: "/community" },
     // { name: "Tutorials", href: "/tutorials" }
@@ -30,10 +30,10 @@ const footerLinks = {
 };
 
 const socialLinks = [
-  { name: "Twitter", icon: Twitter, href: "#" },
-  { name: "Instagram", icon: Instagram, href: "#" },
-  { name: "Facebook", icon: Facebook, href: "#" },
-  { name: "LinkedIn", icon: Linkedin, href: "#" }
+  { name: "Twitter", icon: Twitter, href: "https://x.com/ankitpanwar0707" },
+  { name: "Instagram", icon: Instagram, href: "https://www.instagram.com/ankitpanwar07/" },
+  // { name: "Facebook", icon: Facebook, href: "#" },
+  { name: "LinkedIn", icon: Linkedin, href: "https://www.linkedin.com/in/ankit-panwar-5841181a4/" }
 ];
 
 export const Footer = () => {
@@ -46,12 +46,12 @@ export const Footer = () => {
           <div className="col-span-2 space-y-6">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-hero rounded-xl shadow-soft">
-                <Sparkles className="h-8 w-8 text-foreground" />
+                <DoorOpen className="h-8 w-8 text-foreground" />
               </div>
               <span className="text-2xl font-bold text-foreground">TryOn</span>
             </div>
             <p className="text-foreground/70 max-w-sm leading-relaxed">
-              Transform your photos with AI-powered enhancement technology. 
+              Transform your photos with AI-powered enhancement technology.
               Professional results in seconds, trusted by creators worldwide.
             </p>
             <div className="flex space-x-4">

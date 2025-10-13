@@ -48,7 +48,7 @@ export default function VirtualTryOn() {
   const [gender, setGender] = useState<"male" | "female" | "unisex">("male");
   const [garmentCategory, setGarmentCategory] = useState<"top" | "bottom" | "dress" | "undergarment">("top");
   const [fitPreference, setFitPreference] = useState<"tight" | "regular" | "loose">("regular");
-  const [apiEndpoint, setApiEndpoint] = useState<"fashn" | "nano-banana">("fashn");
+  const [apiEndpoint, setApiEndpoint] = useState<"fashn" | "nano-banana">("nano-banana");
 
 
   // Load saved data from localStorage
@@ -345,13 +345,41 @@ export default function VirtualTryOn() {
 
 
 
+  // Rotating loading messages for the overlay
+  const loadingMessages = [
+    "Generating your virtual try-on...",
+    "Max output time is 30 sec",
+    "AI is matching your style...",
+    "Almost there! Polishing your look...",
+    "Hang tight, magic in progress..."
+  ];
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+  useEffect(() => {
+    if (!isGenerating) {
+      setLoadingMsgIdx(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setLoadingMsgIdx((idx) => (idx + 1) % loadingMessages.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [isGenerating]);
+
   return (
-    <div className="min-h-screen py-10 px-4 " style={{
-      background: "#ffffff",
-      backgroundImage: "radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.35) 1px, transparent 0)",
-      backgroundSize: "20px 20px",
-    }}>
-      <div className="max-w-5xl mx-auto flex flex-col gap-8">
+    <>
+      {/* Fullscreen Loading Overlay */}
+      {isGenerating && (
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+          <Loader2Icon className="w-16 h-16 animate-spin text-gray-600 mb-6" />
+          <div className="text-xl font-semibold text-gray-800">{loadingMessages[loadingMsgIdx]}</div>
+        </div>
+      )}
+      <div className="min-h-screen py-10 px-4 " style={{
+        background: "#ffffff",
+        backgroundImage: "radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.35) 1px, transparent 0)",
+        backgroundSize: "20px 20px",
+      }}>
+        <div className="max-w-5xl mx-auto flex flex-col gap-8">
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-[var(--foreground)]">Virtual Try-On</h1>
@@ -529,8 +557,8 @@ export default function VirtualTryOn() {
               <Label className="text-sm font-medium">AI Model Comparison 🤖</Label>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { value: "fashn", label: "FASHN v1.6", icon: "🚀", desc: "Auto-optimized" },
                   { value: "nano-banana", label: "Nano Banana", icon: "🍌", desc: "Custom prompts" },
+                  { value: "fashn", label: "FASHN v1.6", icon: "🚀", desc: "Auto-optimized" },
                 ]?.map((endpoint) => (
                   <button
                     key={endpoint.value}
@@ -622,7 +650,7 @@ export default function VirtualTryOn() {
             </DrawerHeader>
             
             <div className="px-4 pb-4">
-              <div className="space-y-3 text-sm text-gray-700 mb-6">
+            <div className="space-y-3 text-sm text-gray-700 mb-6 w-full sm:max-w-2xl lg:max-w-4xl mx-auto">
                 {guidelineType === 'user' ? (
                   <>
                     <p className="flex items-center gap-2">
@@ -675,17 +703,17 @@ export default function VirtualTryOn() {
 
             <DrawerFooter>
               <div className="flex gap-3 w-full">
-                <Button onClick={() => proceedWithUpload(guidelineType)} className="flex-1">
-                  <UploadIcon className="w-4 h-4 mr-2" />
+                <Button onClick={() => proceedWithUpload(guidelineType)} className="cursor-pointer flex-1 bg-gray-800 border border-gray-300 text-gray-100 hover:bg-gray-700 transition-colors">
+                  <UploadIcon className="w-4 h-4 mr-2 " />
                   Upload Photo
                 </Button>
-                <Button onClick={() => proceedWithCapture(guidelineType)} variant="outline" className="flex-1">
+                <Button onClick={() => proceedWithCapture(guidelineType)} variant="outline" className="cursor-pointer flex-1 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
                   <CameraIcon className="w-4 h-4 mr-2" />
                   Take Photo
                 </Button>
               </div>
               <DrawerClose asChild>
-                <Button variant="ghost" className="w-full">
+                <Button variant="ghost" className="w-full cursor-pointer">
                   Cancel
                 </Button>
               </DrawerClose>
@@ -727,7 +755,9 @@ export default function VirtualTryOn() {
 
         {/* Hidden video element */}
         <video ref={videoRef} className="hidden" />
+
       </div>
     </div>
+    </>
   );
 }

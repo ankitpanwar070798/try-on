@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/client";
 import { signOut } from "@/lib/auth";
-import { User, LogOut, Crown } from "lucide-react";
+import { User, LogOut, Crown, DoorOpen } from "lucide-react";
 import Link from "next/link";
 
 interface UserData {
@@ -64,8 +64,8 @@ export default function TryOnHeader() {
         <div className="flex items-center gap-3">
           <Link href="/"  >
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-              <Crown className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center">
+              <DoorOpen className="w-5 h-5 text-white" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">TryOn AI</h1>
@@ -89,7 +89,7 @@ export default function TryOnHeader() {
                 {user?.email}
               </p>
             </div>
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
               {getUserAvatar() ? (
                 <Image
                   src={getUserAvatar()!}

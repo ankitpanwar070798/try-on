@@ -79,7 +79,7 @@ export const FAQ = () => {
               href="mailto:support@tryonai.com"
               className="inline-flex items-center space-x-2 text-lavender hover:text-blush transition-colors"
             >
-              <span>Email us at support@tryonai.com</span>
+              <span>Email us at ankitpanwar0707@gmail.com</span>
             </a>
             <span className="hidden sm:block text-foreground/40">|</span>
             <a
