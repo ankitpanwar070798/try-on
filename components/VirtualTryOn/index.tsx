@@ -133,12 +133,12 @@ export default function VirtualTryOn() {
       // 1) Strict facingMode
       try {
         stream = await tryConstraints({ video: { facingMode: { exact: facing } as unknown as VideoFacingModeEnum } as MediaTrackConstraints });
-      } catch {}
+      } catch { }
       // 2) Soft facingMode
       if (!stream) {
         try {
           stream = await tryConstraints({ video: { facingMode: facing as unknown as VideoFacingModeEnum } as MediaTrackConstraints });
-        } catch {}
+        } catch { }
       }
       // 3) Fallback via deviceId
       if (!stream) {
@@ -146,7 +146,7 @@ export default function VirtualTryOn() {
         if (deviceId) {
           try {
             stream = await tryConstraints({ video: { deviceId: { exact: deviceId } } });
-          } catch {}
+          } catch { }
         }
       }
       // 4) Last resort
@@ -178,7 +178,7 @@ export default function VirtualTryOn() {
 
   const takePicture = () => {
     if (!videoRef.current) return;
-    
+
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
     if (!context) return;
@@ -193,7 +193,7 @@ export default function VirtualTryOn() {
       name: `${cameraType}-camera.jpg`,
       createdAt: new Date().toISOString(),
     };
-    
+
     if (cameraType === 'user') {
       localStorage.setItem('userPhoto', JSON.stringify(photoData));
       setUserPhoto(photoData);
@@ -201,7 +201,7 @@ export default function VirtualTryOn() {
       localStorage.setItem('productPhoto', JSON.stringify(photoData));
       setProductPhoto(photoData);
     }
-    
+
     // Stop camera and hide video
     const stream = videoRef.current.srcObject as MediaStream;
     if (stream) {
@@ -338,7 +338,7 @@ export default function VirtualTryOn() {
       const result = await generate();
       setGeneratedImage(result.image);
       localStorage.setItem("generatedImage", result.image);
-      
+
       const endpointUsed = result.endpoint || apiEndpoint;
       const modelName = endpointUsed === 'fashn' ? 'FASHN v1.6 🚀' : 'Nano Banana 🍌';
       toast.success(`Virtual try-on generated successfully using ${modelName}! 🎉`);
@@ -447,393 +447,400 @@ export default function VirtualTryOn() {
         backgroundSize: "20px 20px",
       }}>
         <div className="max-w-5xl mx-auto flex flex-col gap-8">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-[var(--foreground)]">Virtual Try-On</h1>
-          <p className="text-sm md:text-base text-slate-500">Upload your photo and a product image. Keep it simple, see results fast.</p>
-        </div>
+          {/* Header */}
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-[var(--foreground)]">Virtual Try-On</h1>
+            <p className="text-sm md:text-base text-slate-500">Upload your photo and a product image. Keep it simple, see results fast.</p>
+          </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* User Photo Card */}
-          <Card className="surface">
-            <CardHeader>
-              <CardTitle className="text-lg">Your Photo</CardTitle>
-              <CardDescription>Upload or capture a photo of yourself</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4">
-              {userPhoto ? (
-                <div className="relative">
-                  <Image src={userPhoto.data} alt={userPhoto.name} width={256} height={256} className="rounded-lg object-cover" />
-                  <Button onClick={handleRemoveUserPhoto} size="sm" variant="destructive" className="absolute top-2 right-2 bg-red-500">
-                    <Trash2Icon className="w-4 h-4 " />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* User Photo Card */}
+            <Card className="surface">
+              <CardHeader>
+                <CardTitle className="text-lg">Your Photo</CardTitle>
+                <CardDescription>Upload or capture a photo of yourself</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center gap-4">
+                {userPhoto ? (
+                  <div className="relative">
+                    <Image src={userPhoto.data} alt={userPhoto.name} width={256} height={256} className="rounded-lg object-cover" />
+                    <Button onClick={handleRemoveUserPhoto} size="sm" variant="destructive" className="absolute top-2 right-2 bg-red-500">
+                      <Trash2Icon className="w-4 h-4 " />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="w-full border border-dashed rounded-lg p-6 text-center bg-white">
+                    <ImageIcon size={36} className="text-slate-400 mx-auto" />
+                    <p className="text-slate-500 text-sm mt-2">No photo yet</p>
+                  </div>
+                )}
+
+                <div className="flex gap-2 w-full justify-center">
+                  <Input
+                    id="user-file-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleUserFileUpload}
+                    className="hidden"
+                  />
+                  <Button onClick={() => showGuidelinesModal('user')} variant={userPhoto ? "outline" : "default"} className="cursor-pointer flex-1 bg-gray-800 border border-gray-300 text-gray-100 hover:bg-gray-700 transition-colors">
+                    {isUploadingUser ? <Loader2Icon className="w-4 h-4 animate-spin" /> : <UploadIcon className="w-4 h-4" />}
+                    {isUploadingUser ? "Uploading..." : "Upload"}
+                  </Button>
+                  <Button onClick={() => showGuidelinesModal('user')} variant="secondary" className="cursor-pointer flex-1 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
+                    <CameraIcon className="w-4 h-4 mr-2" />
+                    Capture
                   </Button>
                 </div>
-              ) : (
-                <div className="w-full border border-dashed rounded-lg p-6 text-center bg-white">
-                  <ImageIcon size={36} className="text-slate-400 mx-auto" />
-                  <p className="text-slate-500 text-sm mt-2">No photo yet</p>
-                </div>
-              )}
+              </CardContent>
+            </Card>
 
-              <div className="flex gap-2 w-full justify-center">
-                <Input
-                  id="user-file-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleUserFileUpload}
-                  className="hidden"
-                />
-                <Button onClick={() => showGuidelinesModal('user')} variant={userPhoto ? "outline" : "default"} className="cursor-pointer flex-1 bg-gray-800 border border-gray-300 text-gray-100 hover:bg-gray-700 transition-colors">
-                  {isUploadingUser ? <Loader2Icon className="w-4 h-4 animate-spin" /> : <UploadIcon className="w-4 h-4" />}
-                  {isUploadingUser ? "Uploading..." : "Upload"}
-                </Button>
-                <Button onClick={() => showGuidelinesModal('user')} variant="secondary" className="cursor-pointer flex-1 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
-                  <CameraIcon className="w-4 h-4 mr-2" />
-                  Capture
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            {/* Product Photo Card */}
+            <Card className="surface">
+              <CardHeader>
+                <CardTitle className="text-lg">Product Photo</CardTitle>
+                <CardDescription>Upload or capture the clothing item</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center gap-4">
+                {productPhoto ? (
+                  <div className="relative">
+                    <Image src={productPhoto.data} alt={productPhoto.name} width={256} height={256} className="rounded-lg object-cover" />
+                    <Button onClick={handleRemoveProductPhoto} size="sm" variant="destructive" className="absolute top-2 right-2 bg-red-500">
+                      <Trash2Icon className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="w-full border border-dashed rounded-lg p-6 text-center bg-white">
+                    <ImageIcon size={36} className="text-slate-400 mx-auto" />
+                    <p className="text-slate-500 text-sm mt-2">No product photo yet</p>
+                  </div>
+                )}
 
-          {/* Product Photo Card */}
-          <Card className="surface">
-            <CardHeader>
-              <CardTitle className="text-lg">Product Photo</CardTitle>
-              <CardDescription>Upload or capture the clothing item</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4">
-              {productPhoto ? (
-                <div className="relative">
-                  <Image src={productPhoto.data} alt={productPhoto.name} width={256} height={256} className="rounded-lg object-cover" />
-                  <Button onClick={handleRemoveProductPhoto} size="sm" variant="destructive" className="absolute top-2 right-2 bg-red-500">
-                    <Trash2Icon className="w-4 h-4" />
+                <div className="flex gap-2 w-full justify-center">
+                  <Input
+                    id="product-file-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProductFileUpload}
+                    className="hidden"
+                  />
+                  <Button onClick={() => showGuidelinesModal('product')} variant={productPhoto ? "outline" : "default"} className="cursor-pointer flex-1 bg-gray-800 border border-gray-300 text-gray-100 hover:bg-gray-700 transition-colors">
+                    {isUploadingProduct ? <Loader2Icon className="w-4 h-4 animate-spin" /> : <UploadIcon className="w-4 h-4" />}
+                    {isUploadingProduct ? "Uploading..." : "Upload"}
+                  </Button>
+                  <Button onClick={() => showGuidelinesModal('product')} variant="secondary" className="cursor-pointer flex-1 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
+                    <CameraIcon className="w-4 h-4 mr-2" />
+                    Capture
                   </Button>
                 </div>
-              ) : (
-                <div className="w-full border border-dashed rounded-lg p-6 text-center bg-white">
-                  <ImageIcon size={36} className="text-slate-400 mx-auto" />
-                  <p className="text-slate-500 text-sm mt-2">No product photo yet</p>
-                </div>
-              )}
+              </CardContent>
+            </Card>
+          </div>
 
-              <div className="flex gap-2 w-full justify-center">
-                <Input
-                  id="product-file-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleProductFileUpload}
-                  className="hidden"
-                />
-                <Button onClick={() => showGuidelinesModal('product')} variant={productPhoto ? "outline" : "default"} className="cursor-pointer flex-1 bg-gray-800 border border-gray-300 text-gray-100 hover:bg-gray-700 transition-colors">
-                  {isUploadingProduct ? <Loader2Icon className="w-4 h-4 animate-spin" /> : <UploadIcon className="w-4 h-4" />}
-                  {isUploadingProduct ? "Uploading..." : "Upload"}
-                </Button>
-                <Button onClick={() => showGuidelinesModal('product')} variant="secondary" className="cursor-pointer flex-1 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
-                  <CameraIcon className="w-4 h-4 mr-2" />
-                  Capture
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="surface rounded-xl max-w-3xl mx-auto">
-          <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Try-On Preferences</CardTitle>
-            <CardDescription>Help us generate the perfect result by answering a few questions</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Gender Selection */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">Who is trying on? 👤</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {["male", "female", "unisex"]?.map((g) => (
-                  <button
-                    key={g}
-                    onClick={() => setGender(g as typeof gender)}
-                    className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${gender === g
+          <Card className="surface rounded-xl max-w-3xl mx-auto">
+            <CardHeader>
+              <CardTitle className="text-base sm:text-lg">Try-On Preferences</CardTitle>
+              <CardDescription>Help us generate the perfect result by answering a few questions</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Gender Selection */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Who is trying on? 👤</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {["male", "female", "unisex"]?.map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => setGender(g as typeof gender)}
+                      className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${gender === g
                         ? "border-blue-500 bg-blue-50 text-blue-900 dark:bg-blue-950/20 "
                         : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
-                      }`}
-                  >
-                    {g === "male" ? "👨 Male" : g === "female" ? "👩 Female" : "🧑 Unisex"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Garment Category */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">What type of garment? 👔</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { value: "top", label: "Top", icon: "👕", desc: "Shirts, blouses" },
-                  { value: "bottom", label: "Bottom", icon: "👖", desc: "Pants, skirts" },
-                  { value: "dress", label: "Dress", icon: "👗", desc: "Full outfits" },
-                  { value: "undergarment", label: "Underwear", icon: "🩱", desc: "Intimate wear" },
-                ]?.map((cat) => (
-                  <button
-                    key={cat.value}
-                    onClick={() => setGarmentCategory(cat.value as typeof garmentCategory)}
-                    className={`flex flex-col items-center gap-2 rounded-lg border-2 p-3 transition-all ${garmentCategory === cat.value
-                        ? "border-purple-500 bg-purple-50 dark:bg-purple-950/20"
-                        : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
-                      }`}
-                  >
-                    <span className="text-2xl">{cat.icon}</span>
-                    <div className="text-center">
-                      <p className={`text-xs font-medium ${garmentCategory === cat.value
-                          ? "text-purple-900 "
-                          : "text-gray-900 "
-                        }`}>
-                        {cat.label}
-                      </p>
-                      <p className="text-[10px] text-gray-500 ">{cat.desc}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Fit Preference */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">Preferred fit? 📏</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {[
-                  { value: "tight", label: "Tight", icon: "🔥" },
-                  { value: "regular", label: "Regular", icon: "✅" },
-                  { value: "loose", label: "Loose", icon: "🌊" },
-                ]?.map((fit) => (
-                  <button
-                    key={fit.value}
-                    onClick={() => setFitPreference(fit.value as typeof fitPreference)}
-                    className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${fitPreference === fit.value
-                        ? "border-teal-500 bg-teal-50 dark:bg-teal-950/20 "
-                        : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
-                      }`}
-                  >
-                    <span className="mr-1">{fit.icon}</span>
-                    {fit.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* API Endpoint Selection */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">AI Model Comparison 🤖</Label>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { value: "nano-banana", label: "Nano Banana", icon: "🍌", desc: "Custom prompts" },
-                  { value: "fashn", label: "FASHN v1.6", icon: "🚀", desc: "Auto-optimized" },
-                ]?.map((endpoint) => (
-                  <button
-                    key={endpoint.value}
-                    onClick={() => setApiEndpoint(endpoint.value as typeof apiEndpoint)}
-                    className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${apiEndpoint === endpoint.value
-                        ? "border-purple-500 bg-purple-50 dark:bg-purple-950/20 "
-                        : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
-                      }`}
-                  >
-                    <div className="text-center">
-                      <span className="block text-lg mb-1">{endpoint.icon}</span>
-                      <span className="block font-semibold">{endpoint.label}</span>
-                      <span className="block text-xs text-gray-500">{endpoint.desc}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-
-          </CardContent>
-        </Card>
-
-        {/* Generate Button */}
-        <div className="flex justify-center">
-          <Button onClick={handleGenerateTryOn} disabled={!userPhoto || !productPhoto || isGenerating} size="lg" className="cursor-pointer sm:w-2xs w-full  px-6 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
-            {isGenerating ? <><Loader2Icon className="w-5 h-5 animate-spin mr-2" /> Generating...</> : "Generate Virtual Try-On"}
-          </Button>
-        </div>
-
-        {/* Result Card */}
-        {generatedImage && (
-          <Card className="surface rounded-xl max-w-xl mx-auto">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Result</CardTitle>
-                <div className="flex gap-2">
-                  <Button size="icon" className="cursor-pointer" variant="ghost" title="Preview" onClick={openPreview} disabled={!generatedImage}>
-                    <Maximize2 className="w-4 h-4" />
-                  </Button>
-                  <Button size="icon" className="cursor-pointer" variant="ghost" title="Download" onClick={handleDownload} disabled={!generatedImage}>
-                    <Download className="w-4 h-4" />
-                  </Button>
-                  <Button size="icon" className="cursor-pointer" variant="ghost" title="Share" onClick={handleShare} disabled={!generatedImage}>
-                    <Share2 className="w-4 h-4" />
-                  </Button>
+                        }`}
+                    >
+                      {g === "male" ? "👨 Male" : g === "female" ? "👩 Female" : "🧑 Unisex"}
+                    </button>
+                  ))}
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4 justify-center items-center">
-              <Image src={generatedImage} alt="Virtual try-on result" width={320} height={320} className="rounded-lg" />
+
+              {/* Garment Category */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">What type of garment? 👔</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { value: "top", label: "Top", icon: "👕", desc: "Shirts, blouses" },
+                    { value: "bottom", label: "Bottom", icon: "👖", desc: "Pants, skirts" },
+                    { value: "dress", label: "Dress", icon: "👗", desc: "Full outfits" },
+                    { value: "undergarment", label: "Underwear", icon: "🩱", desc: "Intimate wear" },
+                  ]?.map((cat) => (
+                    <button
+                      key={cat.value}
+                      onClick={() => setGarmentCategory(cat.value as typeof garmentCategory)}
+                      className={`flex flex-col items-center gap-2 rounded-lg border-2 p-3 transition-all ${garmentCategory === cat.value
+                        ? "border-purple-500 bg-purple-50 dark:bg-purple-950/20"
+                        : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
+                        }`}
+                    >
+                      <span className="text-2xl">{cat.icon}</span>
+                      <div className="text-center">
+                        <p className={`text-xs font-medium ${garmentCategory === cat.value
+                          ? "text-purple-900 "
+                          : "text-gray-900 "
+                          }`}>
+                          {cat.label}
+                        </p>
+                        <p className="text-[10px] text-gray-500 ">{cat.desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Fit Preference */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Preferred fit? 📏</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {[
+                    { value: "tight", label: "Tight", icon: "🔥" },
+                    { value: "regular", label: "Regular", icon: "✅" },
+                    { value: "loose", label: "Loose", icon: "🌊" },
+                  ]?.map((fit) => (
+                    <button
+                      key={fit.value}
+                      onClick={() => setFitPreference(fit.value as typeof fitPreference)}
+                      className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${fitPreference === fit.value
+                        ? "border-teal-500 bg-teal-50 dark:bg-teal-950/20 "
+                        : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
+                        }`}
+                    >
+                      <span className="mr-1">{fit.icon}</span>
+                      {fit.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* API Endpoint Selection */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">AI Model Comparison 🤖</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { value: "nano-banana", label: "Nano Banana", icon: "🍌", desc: "Custom prompts" },
+                    { value: "fashn", label: "FASHN v1.6", icon: "🚀", desc: "Auto-optimized" },
+                  ]?.map((endpoint) => (
+                    <button
+                      key={endpoint.value}
+                      onClick={() => setApiEndpoint(endpoint.value as typeof apiEndpoint)}
+                      className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${apiEndpoint === endpoint.value
+                        ? "border-purple-500 bg-purple-50 dark:bg-purple-950/20 "
+                        : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
+                        }`}
+                    >
+                      <div className="text-center">
+                        <span className="block text-lg mb-1">{endpoint.icon}</span>
+                        <span className="block font-semibold">{endpoint.label}</span>
+                        <span className="block text-xs text-gray-500">{endpoint.desc}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+
             </CardContent>
           </Card>
-        )}
 
-        {/* Preview Modal */}
-        {isPreviewOpen && generatedImage && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80">
-            <div className="relative max-w-[95vw] max-h-[90vh] overflow-auto">
-              <Image
-                src={generatedImage}
-                alt="Preview"
-                width={800}
-                height={800}
-                className="rounded-xl object-contain w-auto h-auto max-w-full max-h-[90vh]"
-              />
-              <Button
-                size="icon"
-                className="absolute top-2 right-2 bg-white/80 hover:bg-white cursor-pointer"
-                onClick={closePreview}
-              >
-                <X className="w-5 h-5 text-black" />
-              </Button>
-            </div>
+          {/* Generate Button */}
+          <div className="flex justify-center">
+            <Button onClick={handleGenerateTryOn} disabled={!userPhoto || !productPhoto || isGenerating} size="lg" className="cursor-pointer sm:w-2xs w-full  px-6 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
+              {isGenerating ? <><Loader2Icon className="w-5 h-5 animate-spin mr-2" /> Generating...</> : "Generate Virtual Try-On"}
+            </Button>
           </div>
-        )}
 
+          {/* Result Card */}
+          {generatedImage && (
+            <Card className="surface rounded-xl max-w-xl mx-auto">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Result</CardTitle>
+                  <div className="flex gap-2">
+                    <Button size="icon" className="cursor-pointer" variant="ghost" title="Preview" onClick={openPreview} disabled={!generatedImage}>
+                      <Maximize2 className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" className="cursor-pointer" variant="ghost" title="Download" onClick={handleDownload} disabled={!generatedImage}>
+                      <Download className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" className="cursor-pointer" variant="ghost" title="Share" onClick={handleShare} disabled={!generatedImage}>
+                      <Share2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4 justify-center items-center">
+                <Image src={generatedImage} alt="Virtual try-on result" width={320} height={320} className="rounded-lg" />
+              </CardContent>
+            </Card>
+          )}
 
-        {/* Guidelines Drawer */}
-        <Drawer open={showPhotoGuidelines} onOpenChange={setShowPhotoGuidelines}>
-          <DrawerContent>
-            <DrawerHeader>
-              <DrawerTitle>
-                {guidelineType === 'user' ? 'Photo Guidelines - Your Photo' : 'Photo Guidelines - Product Photo'}
-              </DrawerTitle>
-              <DrawerDescription>
-                Follow these tips to get the best virtual try-on results
-              </DrawerDescription>
-            </DrawerHeader>
-            
-            <div className="px-4 pb-4">
-            <div className="space-y-3 text-sm text-gray-700 mb-6 w-full sm:max-w-2xl lg:max-w-4xl mx-auto">
-                {guidelineType === 'user' ? (
-                  <>
-                    <p className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                      Stand straight with good lighting
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                      Face the camera directly
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                      Wear fitted clothing for best results
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                      Avoid busy backgrounds
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                      Make sure your full body is visible
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      Use clear, high-resolution images
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      Ensure the garment is well-lit
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      Avoid shadows and reflections
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      Show the full garment clearly
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      Use a plain background if possible
-                    </p>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <DrawerFooter>
-              <div className="flex gap-3 w-full">
-                <Button onClick={() => proceedWithUpload(guidelineType)} className="cursor-pointer flex-1 bg-gray-800 border border-gray-300 text-gray-100 hover:bg-gray-700 transition-colors">
-                  <UploadIcon className="w-4 h-4 mr-2 " />
-                  Upload Photo
-                </Button>
-                <Button onClick={() => proceedWithCapture(guidelineType)} variant="outline" className="cursor-pointer flex-1 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
-                  <CameraIcon className="w-4 h-4 mr-2" />
-                  Take Photo
-                </Button>
-              </div>
-              <DrawerClose asChild>
-                <Button variant="ghost" className="w-full cursor-pointer">
-                  Cancel
-                </Button>
-              </DrawerClose>
-            </DrawerFooter>
-          </DrawerContent>
-        </Drawer>
-
-        {/* Camera Interface */}
-        {isCameraOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">
-            <div className="relative">
-              <video 
-                ref={videoRef} 
-                className="rounded-lg max-w-[90vw] max-h-[70vh]"
-                autoPlay
-                playsInline
-              />
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-4">
-                <Button 
-                  onClick={takePicture}
-                  size="lg"
-                  className="bg-white text-black hover:bg-gray-200"
-                >
-                  <CameraIcon className="w-6 h-6 mr-2" />
-                  Take Photo
-                </Button>
+          {/* Preview Modal */}
+          {isPreviewOpen && generatedImage && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80">
+              <div className="relative max-w-[95vw] max-h-[90vh] overflow-auto">
+                <Image
+                  src={generatedImage}
+                  alt="Preview"
+                  width={800}
+                  height={800}
+                  className="rounded-xl object-contain w-auto h-auto max-w-full max-h-[90vh]"
+                />
                 <Button
-                  onClick={toggleCameraFacing}
-                  size="lg"
-                  className="bg-white text-black hover:bg-gray-200"
-                  title="Switch camera"
+                  size="icon"
+                  className="absolute top-2 right-2 bg-white/80 hover:bg-white cursor-pointer"
+                  onClick={closePreview}
                 >
-                  <RefreshCw className="w-6 h-6 mr-2" />
-                  Flip Camera
-                </Button>
-                <Button 
-                  onClick={cancelCamera}
-                  size="lg"
-                  variant="outline"
-                  className="bg-gray-800 text-white border-white hover:bg-gray-700"
-                >
-                  Cancel
+                  <X className="w-5 h-5 text-black" />
                 </Button>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-  {/* Hidden video element (kept for stream ref when overlay closed) */}
-  {!isCameraOpen && <video ref={videoRef} className="hidden" />}
 
+          {/* Guidelines Drawer */}
+          <Drawer open={showPhotoGuidelines} onOpenChange={setShowPhotoGuidelines}>
+            <DrawerContent>
+              <DrawerHeader>
+                <DrawerTitle>
+                  {guidelineType === 'user' ? 'Photo Guidelines - Your Photo' : 'Photo Guidelines - Product Photo'}
+                </DrawerTitle>
+                <DrawerDescription>
+                  Follow these tips to get the best virtual try-on results
+                </DrawerDescription>
+              </DrawerHeader>
+
+              <div className="px-4 pb-4">
+                <div className="space-y-3 text-sm text-gray-700 mb-6 w-full sm:max-w-2xl lg:max-w-4xl mx-auto">
+                  {guidelineType === 'user' ? (
+                    <>
+                      <p className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                        Stand straight with good lighting
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                        Face the camera directly
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                        Wear fitted clothing for best results
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                        Avoid busy backgrounds
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                        Make sure your full body is visible
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        Use clear, high-resolution images
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        Ensure the garment is well-lit
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        Avoid shadows and reflections
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        Show the full garment clearly
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        Use a plain background if possible
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <DrawerFooter>
+                <div className="flex gap-3 w-full">
+                  <Button onClick={() => proceedWithUpload(guidelineType)} className="cursor-pointer flex-1 bg-gray-800 border border-gray-300 text-gray-100 hover:bg-gray-700 transition-colors">
+                    <UploadIcon className="w-4 h-4 mr-2 " />
+                    Upload Photo
+                  </Button>
+                  <Button onClick={() => proceedWithCapture(guidelineType)} variant="outline" className="cursor-pointer flex-1 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
+                    <CameraIcon className="w-4 h-4 mr-2" />
+                    Take Photo
+                  </Button>
+                </div>
+                <DrawerClose asChild>
+                  <Button variant="ghost" className="w-full cursor-pointer">
+                    Cancel
+                  </Button>
+                </DrawerClose>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
+
+          {/* Camera Interface */}
+          {isCameraOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4">
+              <div className="relative w-full max-w-3xl">
+                <video
+                  ref={videoRef}
+                  className="rounded-lg w-full max-h-[70vh] object-contain"
+                  autoPlay
+                  playsInline
+                />
+
+                {/* Responsive Button Group */}
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-full px-4">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center w-full">
+                    <Button
+                      onClick={takePicture}
+                      size="lg"
+                      className="w-full sm:w-auto bg-white text-black hover:bg-gray-200"
+                    >
+                      <CameraIcon className="w-6 h-6 mr-2" />
+                      Take Photo
+                    </Button>
+
+                    <Button
+                      onClick={toggleCameraFacing}
+                      size="lg"
+                      className="w-full sm:w-auto bg-white text-black hover:bg-gray-200"
+                      title="Switch camera"
+                    >
+                      <RefreshCw className="w-6 h-6 mr-2" />
+                      Flip Camera
+                    </Button>
+
+                    <Button
+                      onClick={cancelCamera}
+                      size="lg"
+                      variant="outline"
+                      className="w-full sm:w-auto bg-gray-800 text-white border-white hover:bg-gray-700"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+
+          {/* Hidden video element (kept for stream ref when overlay closed) */}
+          {!isCameraOpen && <video ref={videoRef} className="hidden" />}
+
+        </div>
       </div>
-    </div>
     </>
   );
 }
