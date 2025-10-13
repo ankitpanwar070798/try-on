@@ -12,6 +12,15 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { ImageIcon, Loader2Icon, Trash2Icon, UploadIcon, CameraIcon, Download, Share2, Maximize2, X } from "lucide-react";
 import { toast } from "sonner";
 import { toastUtils } from "@/lib/utils";
@@ -26,15 +35,20 @@ export default function VirtualTryOn() {
   const [userPhoto, setUserPhoto] = useState<UserPhoto | null>(null);
   const [productPhoto, setProductPhoto] = useState<UserPhoto | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+
   const [isUploadingUser, setIsUploadingUser] = useState(false);
   const [isUploadingProduct, setIsUploadingProduct] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [showPhotoGuidelines, setShowPhotoGuidelines] = useState(false);
+  const [guidelineType, setGuidelineType] = useState<'user' | 'product'>('user');
+  const [cameraType, setCameraType] = useState<'user' | 'product'>('user');
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [gender, setGender] = useState<"male" | "female" | "unisex">("male");
   const [garmentCategory, setGarmentCategory] = useState<"top" | "bottom" | "dress" | "undergarment">("top");
   const [fitPreference, setFitPreference] = useState<"tight" | "regular" | "loose">("regular");
+  const [apiEndpoint, setApiEndpoint] = useState<"fashn" | "nano-banana">("fashn");
 
 
   // Load saved data from localStorage
@@ -45,7 +59,7 @@ export default function VirtualTryOn() {
 
     if (savedUserPhoto) setUserPhoto(JSON.parse(savedUserPhoto));
     if (savedProductPhoto) setProductPhoto(JSON.parse(savedProductPhoto));
-    if (savedGeneratedImage) setGeneratedImages([savedGeneratedImage]);
+    if (savedGeneratedImage) setGeneratedImage(savedGeneratedImage);
 
     // Welcome toast
     toastUtils.app.welcome();
@@ -77,36 +91,90 @@ export default function VirtualTryOn() {
     return () => window.removeEventListener("keydown", onKey);
   }, [isPreviewOpen]);
 
-  const captureFromCamera = async (setPhoto: (p: UserPhoto) => void, key: string) => {
+  const captureFromCamera = async () => {
     toastUtils.app.cameraStart();
+    setIsCameraOpen(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       if (!videoRef.current) return;
       videoRef.current.srcObject = stream;
+      videoRef.current.style.display = 'block';
       videoRef.current.play();
 
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-      if (!context) return;
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      context.drawImage(videoRef.current, 0, 0);
-
-      const base64 = canvas.toDataURL("image/jpeg");
-      const photoData: UserPhoto = {
-        data: base64,
-        name: `${key}-camera.jpg`,
-        createdAt: new Date().toISOString(),
-      };
-      localStorage.setItem(key, JSON.stringify(photoData));
-      setPhoto(photoData);
-      stream.getTracks().forEach((track) => track.stop());
-      toastUtils.app.cameraSuccess();
+      // Don't auto-capture, wait for user click
     } catch {
       toastUtils.app.cameraError();
+      setIsCameraOpen(false);
     }
+  };
+
+  const takePicture = () => {
+    if (!videoRef.current) return;
+    
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    context.drawImage(videoRef.current, 0, 0);
+
+    const base64 = canvas.toDataURL("image/jpeg");
+    const photoData: UserPhoto = {
+      data: base64,
+      name: `${cameraType}-camera.jpg`,
+      createdAt: new Date().toISOString(),
+    };
+    
+    if (cameraType === 'user') {
+      localStorage.setItem('userPhoto', JSON.stringify(photoData));
+      setUserPhoto(photoData);
+    } else {
+      localStorage.setItem('productPhoto', JSON.stringify(photoData));
+      setProductPhoto(photoData);
+    }
+    
+    // Stop camera and hide video
+    const stream = videoRef.current.srcObject as MediaStream;
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+    }
+    videoRef.current.style.display = 'none';
+    setIsCameraOpen(false);
+    toastUtils.app.cameraSuccess();
+  };
+
+  const cancelCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((track) => track.stop());
+      videoRef.current.style.display = 'none';
+    }
+    setIsCameraOpen(false);
+  };
+
+  const showGuidelinesModal = (type: 'user' | 'product') => {
+    setGuidelineType(type);
+    setShowPhotoGuidelines(true);
+  };
+
+  const closeGuidelinesModal = () => {
+    setShowPhotoGuidelines(false);
+  };
+
+  const proceedWithUpload = (type: 'user' | 'product') => {
+    closeGuidelinesModal();
+    if (type === 'user') {
+      document.getElementById('user-file-upload')?.click();
+    } else {
+      document.getElementById('product-file-upload')?.click();
+    }
+  };
+
+  const proceedWithCapture = (type: 'user' | 'product') => {
+    closeGuidelinesModal();
+    setCameraType(type);
+    captureFromCamera();
   };
 
   const handleUserFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -176,33 +244,37 @@ export default function VirtualTryOn() {
 
     setIsGenerating(true);
     setGeneratedImage(null);
-    setGeneratedImages([]);
 
     toast.info("Starting AI try-on generation...", { duration: 3000 });
 
     try {
-      // Helper to call the API with a specific prompt and negativePrompt
-      const generate = async ({ prompt, negativePrompt }: { prompt: string; negativePrompt: string }) => {
+      // Helper to call the API
+      const generate = async () => {
         const res = await fetch("/api/generate-tryon", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userPhoto: userPhoto.data,
             productPhoto: productPhoto.data,
-            prompt,
-            negativePrompt,
+            gender,
+            garmentCategory,
+            fitPreference,
+            endpoint: apiEndpoint,
           }),
         });
         const data = await res.json();
         if (!res.ok || !data.image) throw new Error(data.error || "Failed to generate try-on");
-        return data.image;
+        return data;
       };
 
       // Only single image generation now
-      const image = await generate(generatePrompt());
-      setGeneratedImage(image);
-      localStorage.setItem("generatedImage", image);
-      toast.success("Virtual try-on generated successfully! 🎉");
+      const result = await generate();
+      setGeneratedImage(result.image);
+      localStorage.setItem("generatedImage", result.image);
+      
+      const endpointUsed = result.endpoint || apiEndpoint;
+      const modelName = endpointUsed === 'fashn' ? 'FASHN v1.6 🚀' : 'Nano Banana 🍌';
+      toast.success(`Virtual try-on generated successfully using ${modelName}! 🎉`);
     } catch {
       toast.error("Failed to generate try-on");
     } finally {
@@ -211,10 +283,10 @@ export default function VirtualTryOn() {
   };
 
   const handleDownload = async () => {
-    if (generatedImages.length === 0) return;
+    if (!generatedImage) return;
 
     try {
-      const response = await fetch(generatedImages[0]);
+      const response = await fetch(generatedImage);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
 
@@ -233,13 +305,13 @@ export default function VirtualTryOn() {
   };
 
   const handleShare = async () => {
-    if (generatedImages.length === 0) return;
+    if (!generatedImage) return;
 
     try {
       // Check if Web Share API is supported
       if (navigator.share) {
         // For Web Share API, we need to convert the image to a File
-        const response = await fetch(generatedImages[0]);
+        const response = await fetch(generatedImage);
         const blob = await response.blob();
         const file = new File([blob], `virtual-try-on-${Date.now()}.png`, { type: 'image/png' });
 
@@ -252,13 +324,13 @@ export default function VirtualTryOn() {
         toast.success("Shared successfully! 🚀");
       } else {
         // Fallback: Copy link to clipboard
-        await navigator.clipboard.writeText(generatedImages[0]);
+        await navigator.clipboard.writeText(generatedImage);
         toast.success("Image link copied to clipboard! 📋");
       }
-    } catch (err) {
+    } catch {
       // If sharing fails, try copying to clipboard as fallback
       try {
-        await navigator.clipboard.writeText(generatedImages[0]);
+        await navigator.clipboard.writeText(generatedImage);
         toast.success("Image link copied to clipboard! 📋");
       } catch {
         toast.error("Unable to share. Please try downloading instead.");
@@ -266,64 +338,11 @@ export default function VirtualTryOn() {
     }
   };
 
-  // Dynamic prompt generator based on user preferences
-const generatePrompt = () => {
-  const genderText =
-    gender === "male" ? "man" : gender === "female" ? "woman" : "person";
 
-  const fitText =
-    fitPreference === "tight"
-      ? "snug fit, body-hugging, tailored"
-      : fitPreference === "loose"
-      ? "relaxed fit, slightly oversized"
-      : "natural fit, balanced shape";
 
-  let garmentDescription = "";
-  switch (garmentCategory) {
-    case "top":
-      garmentDescription = "upper-body clothing (shirt, t-shirt, blouse, jacket)";
-      break;
-    case "bottom":
-      garmentDescription = "lower-body clothing (pants, jeans, skirt, shorts)";
-      break;
-    case "dress":
-      garmentDescription = "full-body outfit (dress or gown)";
-      break;
-    case "undergarment":
-      garmentDescription =
-        gender === "male"
-          ? "men’s undergarment (briefs, boxers, undershirt)"
-          : "women’s undergarment (bra, panties, lingerie)";
-      break;
-  }
 
-  let basePrompt = `
-professional fashion photoshoot of a ${genderText} wearing ${garmentDescription}, 
-realistic virtual try-on, ${fitText}, natural body proportions, 
-soft studio lighting, high-detail fabric texture, natural skin tone, 
-realistic shadows and reflections, seamless garment integration, 
-preserve original background, realistic posture, 8k photo, DSLR, shallow depth of field, 
-editorial quality, fashion e-commerce photography style.
-`;
 
-  if (garmentCategory === "bottom") {
-    basePrompt += `
-remove existing lower-body clothing, apply only the new garment, 
-ensure alignment and natural drape of fabric around legs and waist.`;
-  }
 
-  // Optional: model-safe negative prompt guidance
-  const negativePrompt = `
-blurry, distorted body, double limbs, deformed hands, artifacts, incorrect lighting, 
-cartoon, painting, AI-looking texture, unrealistic shadows, mismatched perspective, 
-extra clothing layers, transparency, overexposure, bad anatomy.
-`;
-
-  return {
-    prompt: basePrompt.trim(),
-    negativePrompt: negativePrompt.trim(),
-  };
-};
 
 
   return (
@@ -369,13 +388,11 @@ extra clothing layers, transparency, overexposure, bad anatomy.
                   onChange={handleUserFileUpload}
                   className="hidden"
                 />
-                <Button asChild variant={userPhoto ? "outline" : "default"} className="cursor-pointer flex-1 bg-gray-800 border border-gray-300 text-gray-100 hover:bg-gray-700 transition-colors">
-                  <Label htmlFor="user-file-upload" className=" flex items-center gap-2">
-                    {isUploadingUser ? <Loader2Icon className="w-4 h-4 animate-spin" /> : <UploadIcon className="w-4 h-4" />}
-                    {isUploadingUser ? "Uploading..." : "Upload"}
-                  </Label>
+                <Button onClick={() => showGuidelinesModal('user')} variant={userPhoto ? "outline" : "default"} className="cursor-pointer flex-1 bg-gray-800 border border-gray-300 text-gray-100 hover:bg-gray-700 transition-colors">
+                  {isUploadingUser ? <Loader2Icon className="w-4 h-4 animate-spin" /> : <UploadIcon className="w-4 h-4" />}
+                  {isUploadingUser ? "Uploading..." : "Upload"}
                 </Button>
-                <Button onClick={() => captureFromCamera(setUserPhoto, "userPhoto")} variant="secondary" className="cursor-pointer flex-1 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
+                <Button onClick={() => showGuidelinesModal('user')} variant="secondary" className="cursor-pointer flex-1 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
                   <CameraIcon className="w-4 h-4 mr-2" />
                   Capture
                 </Button>
@@ -412,13 +429,11 @@ extra clothing layers, transparency, overexposure, bad anatomy.
                   onChange={handleProductFileUpload}
                   className="hidden"
                 />
-                <Button asChild variant={productPhoto ? "outline" : "default"} className="cursor-pointer flex-1 bg-gray-800 border border-gray-300 text-gray-100 hover:bg-gray-700 transition-colors">
-                  <Label htmlFor="product-file-upload" className="flex items-center gap-2">
-                    {isUploadingProduct ? <Loader2Icon className="w-4 h-4 animate-spin" /> : <UploadIcon className="w-4 h-4" />}
-                    {isUploadingProduct ? "Uploading..." : "Upload"}
-                  </Label>
+                <Button onClick={() => showGuidelinesModal('product')} variant={productPhoto ? "outline" : "default"} className="cursor-pointer flex-1 bg-gray-800 border border-gray-300 text-gray-100 hover:bg-gray-700 transition-colors">
+                  {isUploadingProduct ? <Loader2Icon className="w-4 h-4 animate-spin" /> : <UploadIcon className="w-4 h-4" />}
+                  {isUploadingProduct ? "Uploading..." : "Upload"}
                 </Button>
-                <Button onClick={() => captureFromCamera(setProductPhoto, "productPhoto")} variant="secondary" className="cursor-pointer flex-1 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
+                <Button onClick={() => showGuidelinesModal('product')} variant="secondary" className="cursor-pointer flex-1 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
                   <CameraIcon className="w-4 h-4 mr-2" />
                   Capture
                 </Button>
@@ -509,7 +524,31 @@ extra clothing layers, transparency, overexposure, bad anatomy.
               </div>
             </div>
 
-            {/* Removed viewing angle selection UI */}
+            {/* API Endpoint Selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">AI Model Comparison 🤖</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { value: "fashn", label: "FASHN v1.6", icon: "🚀", desc: "Auto-optimized" },
+                  { value: "nano-banana", label: "Nano Banana", icon: "🍌", desc: "Custom prompts" },
+                ]?.map((endpoint) => (
+                  <button
+                    key={endpoint.value}
+                    onClick={() => setApiEndpoint(endpoint.value as typeof apiEndpoint)}
+                    className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${apiEndpoint === endpoint.value
+                        ? "border-purple-500 bg-purple-50 dark:bg-purple-950/20 "
+                        : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
+                      }`}
+                  >
+                    <div className="text-center">
+                      <span className="block text-lg mb-1">{endpoint.icon}</span>
+                      <span className="block font-semibold">{endpoint.label}</span>
+                      <span className="block text-xs text-gray-500">{endpoint.desc}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
 
           </CardContent>
@@ -551,9 +590,11 @@ extra clothing layers, transparency, overexposure, bad anatomy.
         {isPreviewOpen && generatedImage && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80">
             <div className="relative max-w-[95vw] max-h-[90vh] overflow-auto">
-              <img
+              <Image
                 src={generatedImage}
                 alt="Preview"
+                width={800}
+                height={800}
                 className="rounded-xl object-contain w-auto h-auto max-w-full max-h-[90vh]"
               />
               <Button
@@ -567,6 +608,122 @@ extra clothing layers, transparency, overexposure, bad anatomy.
           </div>
         )}
 
+
+        {/* Guidelines Drawer */}
+        <Drawer open={showPhotoGuidelines} onOpenChange={setShowPhotoGuidelines}>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>
+                {guidelineType === 'user' ? 'Photo Guidelines - Your Photo' : 'Photo Guidelines - Product Photo'}
+              </DrawerTitle>
+              <DrawerDescription>
+                Follow these tips to get the best virtual try-on results
+              </DrawerDescription>
+            </DrawerHeader>
+            
+            <div className="px-4 pb-4">
+              <div className="space-y-3 text-sm text-gray-700 mb-6">
+                {guidelineType === 'user' ? (
+                  <>
+                    <p className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                      Stand straight with good lighting
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                      Face the camera directly
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                      Wear fitted clothing for best results
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                      Avoid busy backgrounds
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                      Make sure your full body is visible
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      Use clear, high-resolution images
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      Ensure the garment is well-lit
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      Avoid shadows and reflections
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      Show the full garment clearly
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      Use a plain background if possible
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <DrawerFooter>
+              <div className="flex gap-3 w-full">
+                <Button onClick={() => proceedWithUpload(guidelineType)} className="flex-1">
+                  <UploadIcon className="w-4 h-4 mr-2" />
+                  Upload Photo
+                </Button>
+                <Button onClick={() => proceedWithCapture(guidelineType)} variant="outline" className="flex-1">
+                  <CameraIcon className="w-4 h-4 mr-2" />
+                  Take Photo
+                </Button>
+              </div>
+              <DrawerClose asChild>
+                <Button variant="ghost" className="w-full">
+                  Cancel
+                </Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+
+        {/* Camera Interface */}
+        {isCameraOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">
+            <div className="relative">
+              <video 
+                ref={videoRef} 
+                className="rounded-lg max-w-[90vw] max-h-[70vh]"
+                autoPlay
+                playsInline
+              />
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-4">
+                <Button 
+                  onClick={takePicture}
+                  size="lg"
+                  className="bg-white text-black hover:bg-gray-200"
+                >
+                  <CameraIcon className="w-6 h-6 mr-2" />
+                  Take Photo
+                </Button>
+                <Button 
+                  onClick={cancelCamera}
+                  size="lg"
+                  variant="outline"
+                  className="bg-gray-800 text-white border-white hover:bg-gray-700"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Hidden video element */}
         <video ref={videoRef} className="hidden" />

@@ -17,6 +17,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "v3b.fal.media",
       },
+      {
+        protocol: "https",
+        hostname: "cdn.fashn.ai",
+      }
     ],
   },
 };
