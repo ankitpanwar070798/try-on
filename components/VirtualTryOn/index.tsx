@@ -21,7 +21,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { ImageIcon, Loader2Icon, Trash2Icon, UploadIcon, CameraIcon, Download, Share2, Maximize2, X } from "lucide-react";
+import { ImageIcon, Loader2Icon, Trash2Icon, UploadIcon, CameraIcon, Download, Share2, Maximize2, X, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { toastUtils } from "@/lib/utils";
 
@@ -49,6 +49,7 @@ export default function VirtualTryOn() {
   const [garmentCategory, setGarmentCategory] = useState<"top" | "bottom" | "dress" | "undergarment">("top");
   const [fitPreference, setFitPreference] = useState<"tight" | "regular" | "loose">("regular");
   const [apiEndpoint, setApiEndpoint] = useState<"fashn" | "nano-banana">("nano-banana");
+  const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
 
 
   // Load saved data from localStorage
@@ -91,21 +92,88 @@ export default function VirtualTryOn() {
     return () => window.removeEventListener("keydown", onKey);
   }, [isPreviewOpen]);
 
-  const captureFromCamera = async () => {
+  // Camera helpers for mobile front/rear switching
+  const stopCurrentStream = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((track) => track.stop());
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  const getDeviceIdForFacing = async (facing: 'user' | 'environment') => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videos = devices.filter((d) => d.kind === 'videoinput');
+      const target =
+        videos.find((d) => {
+          const label = (d.label || '').toLowerCase();
+          return facing === 'environment'
+            ? label.includes('back') || label.includes('rear') || label.includes('environment')
+            : label.includes('front') || label.includes('user');
+        }) || videos[0];
+      return target?.deviceId;
+    } catch {
+      return undefined;
+    }
+  };
+
+  const startCamera = async (facing: 'user' | 'environment') => {
     toastUtils.app.cameraStart();
     setIsCameraOpen(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Stop any existing stream
+      stopCurrentStream();
+
+      const tryConstraints = async (constraints: MediaStreamConstraints) => {
+        return await navigator.mediaDevices.getUserMedia(constraints);
+      };
+
+      let stream: MediaStream | null = null;
+      // 1) Strict facingMode
+      try {
+        stream = await tryConstraints({ video: { facingMode: { exact: facing } as unknown as VideoFacingModeEnum } as MediaTrackConstraints });
+      } catch {}
+      // 2) Soft facingMode
+      if (!stream) {
+        try {
+          stream = await tryConstraints({ video: { facingMode: facing as unknown as VideoFacingModeEnum } as MediaTrackConstraints });
+        } catch {}
+      }
+      // 3) Fallback via deviceId
+      if (!stream) {
+        const deviceId = await getDeviceIdForFacing(facing);
+        if (deviceId) {
+          try {
+            stream = await tryConstraints({ video: { deviceId: { exact: deviceId } } });
+          } catch {}
+        }
+      }
+      // 4) Last resort
+      if (!stream) {
+        stream = await tryConstraints({ video: true });
+      }
+
+      if (!stream) throw new Error('Unable to access camera');
+
       if (!videoRef.current) return;
       videoRef.current.srcObject = stream;
       videoRef.current.style.display = 'block';
-      videoRef.current.play();
-
-      // Don't auto-capture, wait for user click
+      await videoRef.current.play();
     } catch {
       toastUtils.app.cameraError();
       setIsCameraOpen(false);
     }
+  };
+
+  const toggleCameraFacing = async () => {
+    const next = cameraFacing === 'user' ? 'environment' : 'user';
+    setCameraFacing(next);
+    await startCamera(next);
+  };
+
+  const captureFromCamera = async () => {
+    await startCamera(cameraFacing);
   };
 
   const takePicture = () => {
@@ -145,11 +213,8 @@ export default function VirtualTryOn() {
   };
 
   const cancelCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => track.stop());
-      videoRef.current.style.display = 'none';
-    }
+    stopCurrentStream();
+    if (videoRef.current) videoRef.current.style.display = 'none';
     setIsCameraOpen(false);
   };
 
@@ -174,6 +239,8 @@ export default function VirtualTryOn() {
   const proceedWithCapture = (type: 'user' | 'product') => {
     closeGuidelinesModal();
     setCameraType(type);
+    const preferredFacing = type === 'user' ? 'user' : 'environment';
+    setCameraFacing(preferredFacing);
     captureFromCamera();
   };
 
@@ -363,7 +430,7 @@ export default function VirtualTryOn() {
       setLoadingMsgIdx((idx) => (idx + 1) % loadingMessages.length);
     }, 2000);
     return () => clearInterval(interval);
-  }, [isGenerating]);
+  }, [isGenerating, loadingMessages.length]);
 
   return (
     <>
@@ -740,6 +807,15 @@ export default function VirtualTryOn() {
                   <CameraIcon className="w-6 h-6 mr-2" />
                   Take Photo
                 </Button>
+                <Button
+                  onClick={toggleCameraFacing}
+                  size="lg"
+                  className="bg-white text-black hover:bg-gray-200"
+                  title="Switch camera"
+                >
+                  <RefreshCw className="w-6 h-6 mr-2" />
+                  Flip Camera
+                </Button>
                 <Button 
                   onClick={cancelCamera}
                   size="lg"
@@ -753,8 +829,8 @@ export default function VirtualTryOn() {
           </div>
         )}
 
-        {/* Hidden video element */}
-        <video ref={videoRef} className="hidden" />
+  {/* Hidden video element (kept for stream ref when overlay closed) */}
+  {!isCameraOpen && <video ref={videoRef} className="hidden" />}
 
       </div>
     </div>
