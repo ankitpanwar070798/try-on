@@ -70,9 +70,15 @@ export const toastUtils = {
 
   // Common application-specific toasts
   app: {
-    welcome: () => toastUtils.success("Welcome to Virtual Try-On!", { 
-      description: "Upload your photo and a product image to get started." 
-    }),
+    welcome: () => {
+      if (typeof window !== 'undefined') {
+        if (sessionStorage.getItem('welcomeToastShown')) return;
+        sessionStorage.setItem('welcomeToastShown', '1');
+      }
+      toastUtils.success("Welcome to Virtual Try-On!", {
+        description: "Upload your photo and a product image to get started."
+      });
+    },
     
     uploadStart: (type: "user" | "product") => 
       toastUtils.info(`Uploading ${type === "user" ? "your" : "product"} photo...`),

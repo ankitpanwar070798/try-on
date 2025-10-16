@@ -65,9 +65,9 @@ function LoginForm() {
         console.log("Sign in response:", data);
 
         if (data.session) {
-          console.log("✅ Sign in successful, session created");
+          console.log("Sign in successful, session created");
           console.log("Redirecting to:", redirectedFrom);
-          router.replace(redirectedFrom);
+          window.location.replace(redirectedFrom);
           return;
         } else if (data.user && !data.session) {
           setError("Please verify your email before signing in.");

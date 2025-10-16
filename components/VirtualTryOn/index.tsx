@@ -39,6 +39,12 @@ export default function VirtualTryOn() {
   const [isUploadingUser, setIsUploadingUser] = useState(false);
   const [isUploadingProduct, setIsUploadingProduct] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationCount, setGenerationCount] = useState(0);
+  // Load generation count from localStorage
+  useEffect(() => {
+    const count = parseInt(localStorage.getItem("generationCount") || "0", 10);
+    setGenerationCount(count);
+  }, []);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [showPhotoGuidelines, setShowPhotoGuidelines] = useState(false);
@@ -308,6 +314,10 @@ export default function VirtualTryOn() {
 
   const handleGenerateTryOn = async () => {
     if (!userPhoto || !productPhoto) return toast.error("Please upload both photos");
+    if (generationCount >= 2) {
+      toast.error("You have reached the maximum of 2 generations.");
+      return;
+    }
 
     setIsGenerating(true);
     setGeneratedImage(null);
@@ -338,6 +348,11 @@ export default function VirtualTryOn() {
       const result = await generate();
       setGeneratedImage(result.image);
       localStorage.setItem("generatedImage", result.image);
+
+      // Increment generation count
+      const newCount = generationCount + 1;
+      setGenerationCount(newCount);
+      localStorage.setItem("generationCount", newCount.toString());
 
       const endpointUsed = result.endpoint || apiEndpoint;
       const modelName = endpointUsed === 'fashn' ? 'FASHN v1.6 🚀' : 'Nano Banana 🍌';
@@ -405,13 +420,6 @@ export default function VirtualTryOn() {
     }
   };
 
-
-
-
-
-
-
-
   // Rotating loading messages for the overlay
   const loadingMessages = [
     "Generating your virtual try-on...",
@@ -428,7 +436,7 @@ export default function VirtualTryOn() {
     }
     const interval = setInterval(() => {
       setLoadingMsgIdx((idx) => (idx + 1) % loadingMessages.length);
-    }, 2000);
+    }, 4000);
     return () => clearInterval(interval);
   }, [isGenerating, loadingMessages.length]);
 
@@ -570,7 +578,7 @@ export default function VirtualTryOn() {
                     { value: "top", label: "Top", icon: "👕", desc: "Shirts, blouses" },
                     { value: "bottom", label: "Bottom", icon: "👖", desc: "Pants, skirts" },
                     { value: "dress", label: "Dress", icon: "👗", desc: "Full outfits" },
-                    { value: "undergarment", label: "Underwear", icon: "🩱", desc: "Intimate wear" },
+                    // { value: "undergarment", label: "Underwear", icon: "🩱", desc: "Intimate wear" },
                   ]?.map((cat) => (
                     <button
                       key={cat.value}
@@ -651,8 +659,17 @@ export default function VirtualTryOn() {
 
           {/* Generate Button */}
           <div className="flex justify-center">
-            <Button onClick={handleGenerateTryOn} disabled={!userPhoto || !productPhoto || isGenerating} size="lg" className="cursor-pointer sm:w-2xs w-full  px-6 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors">
-              {isGenerating ? <><Loader2Icon className="w-5 h-5 animate-spin mr-2" /> Generating...</> : "Generate Virtual Try-On"}
+            <Button
+              onClick={handleGenerateTryOn}
+              disabled={!userPhoto || !productPhoto || isGenerating || generationCount >= 2}
+              size="lg"
+              className="cursor-pointer sm:w-2xs w-full  px-6 bg-gray-100 border border-gray-300 text-gray-800 hover:bg-gray-200 transition-colors"
+            >
+              {isGenerating
+                ? <><Loader2Icon className="w-5 h-5 animate-spin mr-2" /> Generating...</>
+                : generationCount >= 2
+                  ? "Limit Reached (2/2)"
+                  : "Generate Virtual Try-On"}
             </Button>
           </div>
 

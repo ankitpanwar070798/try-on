@@ -1,3 +1,4 @@
+import CouplesConnection from '@/components/couple_card_game'
 import { Demo } from '@/components/Demo'
 import { FAQ } from '@/components/FAQ'
 import { Footer } from '@/components/Footer'
@@ -26,6 +27,7 @@ const page = () => {
       {/* <Testimonials /> */}
       <FAQ />
       <Footer/>
+      <CouplesConnection/>
     </div>
   )
 }

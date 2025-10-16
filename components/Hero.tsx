@@ -50,7 +50,7 @@ const Hero = () => {
                     <div className="mt-8 flex items-center justify-center lg:justify-start space-x-6 text-sm text-gray-500">
                         <div className="flex items-center text-zinc-700 font-medium">
                             <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-                            3 free tokens included
+                            2 free tokens included
                         </div>
                         <div className="flex items-center text-zinc-700 font-medium">
                             <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
